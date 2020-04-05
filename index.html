@@ -1,0 +1,5453 @@
+﻿<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>C.E.S.</title>
+        <!--script src="//cdn.jsdelivr.net/phaser/2.5.0/phaser.min.js"></script-->
+		<script type="text/javascript" src="phaser.js"></script>
+		<script type="text/javascript" src="assets/text/story.js"></script>
+		<script type="text/javascript" src="assets/text/replics.js"></script>
+		<script type="text/javascript" src="assets/scenes/scenes.js"></script>
+    </head>
+    <body style="background-color: black; margin: 0px;">
+
+    <script type="text/javascript">
+
+	var CES = {
+		version: '0.3.1',
+		trademark: 'Shity Games',
+		autor: 'YuVK',
+		changeLog: {}
+	};
+	
+	var lvls = null;
+	
+    window.onload = function() {
+	
+		console.log('C.E.S. ', CES);
+		
+		CES.changeLog = {
+			'1.23-12-2018': 'DDOS attack after 2 hits in 2 seconds. Plus black popup messages in Serenity.',
+			'2.17-02-2019': 'Collectable artifacts.',
+			'3.24-03-2019': 'Added "no items" icons in artifact selection menu.',
+			'4.06-04-2019': 'Damage digits popup was added',
+			'5.07-04-2019': 'Select items by keyboaurd is implemented',
+			'6.11-04-2019': 'Fine game info + fixed some color mechanism',
+			'7.11-04-2019': 'Some new level types and chapters concept',
+			'8.21-04-2019': 'Main story + Title screen + Finale',
+			'9.24-04-2019': 'Miniworlds + level names',
+			'10.03-06-2019': 'Skills and merchants',
+			'11.09-06-2019': 'Random skill list for merchants. First level "Failed load". Hell moved to separated final chapter. Some emenies balance changes.',
+			'12.06-07-2019': 'Simple story files + generator + rino + some balance fixes',
+			'13.13-07-2019': 'Dino was added',
+			'14.16-07-2019': 'Small fixes + Loading screen',
+			'15.28-07-2019': 'Scenes + Fix loading shift',
+			'16.06-08-2019': 'More scenes',
+			'17.12-09-2019': 'All main story scenes',
+			'18.27-10-2019': 'Fix scenes timing + calls with 2H were added.',
+			'19.05-11-2019': 'Konungr was added to Helheim. And there can be only one.',
+			'20.10-11-2019': 'Afterdeath was added.',
+		};
+		
+		var needToShowScene = false;
+		var needToShowCall = false;
+		var needToShowAfterdeath = false;
+		var deathCnt = 0;
+		
+		var showTeleCallsList = [
+			{chapter:4, keysCollected:5},
+			{chapter:5, keysCollected:4},
+			{chapter:6, keysCollected:5},
+			{chapter:7, keysCollected:3}
+		];
+		
+		/*var showTeleCallsList = [
+			{chapter:4, keysCollected:2},
+			{chapter:5, keysCollected:2},
+			{chapter:6, keysCollected:2},
+			{chapter:7, keysCollected:2}
+		];*/
+		
+		var mainText = mainStoryText;		
+		var simpleText = simpleStoryText;
+		
+		var currentLevelFlags = {
+			konungr: false
+		};
+		
+		var end = false;
+		
+		var isForOneTouch = true;
+        
+		var scanMultiple = 0.7;
+		
+		var itemPanelY = 0;
+		
+        var enemyIdKey = 0;
+
+        var cellSize = 48;
+		
+		var teleRadiusMultiple = 3;
+		
+		var minGameDimention = 7;
+		var maxGameDimention = 25;
+		
+		var keysCollected = 0;
+		
+		var fontSizeStr = '12px';
+
+        var gameDimention = 15//getRandomInt(minGameDimention, maxGameDimention);
+        
+        var title, scene, finale, loading,  platforms, floors, player, cursors, transistors, micros, cpus, enemies = [], items = [], exit, life;
+		var fistItem, swordItem, fireItem, frostItem, thunderItem, madnessItem, mimicItem, 
+			vampireItem, telekinesisItem, immortalItem, compassItem, noItems, healthItem, speedItem, powerItem,
+			artifacts, mainFiles, files;
+		var speedSkillItem, powerSkillItem, healthSkillItem, intellectSkillItem;
+		var button, iconItems = [], buttons = [], iconSkills = [];
+		
+		var skillInfoText = {
+			SPEED: null,
+			POWER: null,
+			HEALTH: null,
+			INTELLECT: null
+		}
+        
+		var chapter = 1;
+		
+		var gameStarted = false;
+		
+		var levelTypeSelect;
+        
+        var score = 0;
+		//var score = 1000000;
+        var scoreText, healthText, enemyHealthText, modeText, storyText;
+		var showStoryText = false;
+        var level = [];
+		
+		var hasCompass = false;
+        
+        var playerStep = 120
+		var maxPlayerLife = 100;
+		var beginPlayerLife = 100;
+
+        var playerLookRight = false;
+		
+		var playerAttack = 5
+		var playerAttackCooldown = 500
+		var playerAttackRadius = 60; //70
+		var enemyAttackCooldown = 1000;
+		var enemyAtackRadius = 35;		
+		
+		var playerIntellect = 0;
+		
+		var gameInfoHorizontalShift = 0;
+		var gameInfoVerticalShift = 0;
+		
+		var paintTitleInterval, paintMainFileInterval;
+		
+		var miniWorldsCount = 0;
+        
+		var ENEMIES = {
+			MODULE: 'module',
+			VIKING: 'viking',
+			KONUNGR: 'konungr',
+			IRON: 'iron',
+			TOWER: 'tower',
+			FLY: 'fly',
+			TIN: 'tin',
+			SPIDER: 'spider',
+			ORB: 'orb',
+			SQUARE: 'square',
+			HOUND: 'hound',
+			WOLF: 'wolf',
+			RABBIT: 'rabbit',
+			SPHERE: 'sphere',
+			CATERPILLAR: 'caterpillar',
+			WASP: 'wasp',
+			FOX: 'fox',
+			FREEZE: 'freeze',
+			MERCHANT: 'merchant',
+			RINO: 'rino',
+			GENERATOR: 'generator',
+			DINO: 'dino',
+			SPACE: 'space'
+		};
+		
+		var ENEMY_REPLICS = enemyReplics;
+		
+		var ANIMATIONS = {
+			SHOW: 'show',
+			HIDE: 'hide',
+			CLOSED: 'closed',
+			LEFT: 'left',
+			RIGHT: 'right',
+			PUNCH_LEFT: 'punch-left',
+			PUNCH_RIGHT: 'punch-right',
+			DAMAGE: 'damage',
+			DEATH: 'death'
+		};
+		
+        var DIRECTIONS = {
+            WEST: 1,
+            EAST: 2,
+            NORTH: 3,
+            SOUTH: 4,
+            NORTH_WEST: 5,
+            NORTH_EAST: 6,
+            SOUTH_WEST: 7,
+            SOUTH_EAST: 8,
+            NONE: 9,
+        }
+		
+		var BLACK_COLOR = '0x000000';
+		
+		var COLORS = {
+			RED: '0xff0000',	
+			ORANGE:	'0xffa500',
+			YELLOW: '0xffff00',
+			GREEN: '0x00ff00',
+			DARK_GREEN: '0x008200',
+			CYAN: '0x00ffff',
+			BLUE: '0x0000ff',
+			VIOLET: '0x5A339D',
+			WHITE: '0xffffff',
+			PURPLE: '0xC400AB',
+			PINK: '0xFFCBDB',
+			GRAY: '0x545454',
+			BROWN: '0x7a5230',			
+			RAN: 'RANDOM_COLOR',
+			WRAN: 'WHITE_RANDOM_COLOR'
+		};
+		
+		var FOUND_ARTIFACTS = {
+			FIST: true,
+			SWORD: false,
+			FIRE: false,
+			FROST: false,
+			THUNDER: false,
+			MADNESS: false,
+			MIMIC: false,
+			VAMPIRE: false,
+			TELE: false,
+			IMMORTAL: false
+		};
+		
+		/*var FOUND_ARTIFACTS = {
+			FIST: true,
+			SWORD: true,
+			FIRE: true,
+			FROST: true,
+			THUNDER: true,
+			MADNESS: true,
+			MIMIC: true,
+			VAMPIRE: true,
+			TELE: true,
+			IMMORTAL: true
+		};*/
+		
+		var ARTIFACTS = {
+			FIST: 'FIST',
+			SWORD: 'SWORD',
+			FIRE: 'FIRE',
+			FROST: 'FROST',
+			THUNDER: 'THUNDER',
+			MADNESS: 'MADNESS',
+			MIMIC: 'MIMIC',
+			VAMPIRE: 'VAMPIRE',
+			TELE: 'TELE',
+			IMMORTAL: 'IMMORTAL'
+		};
+		
+		var SKILLS = {
+			SPEED: 'SPEED',
+			POWER: 'POWER',
+			HEALTH: 'HEALTH',
+			INTELLECT: 'INTELLECT'
+		}
+		
+		var ARTIFACTS_MESSAGES = {
+			FIST: 'Fist',
+			SWORD: 'Sword',
+			FIRE: 'Fire',
+			FROST: 'Frost',
+			THUNDER: 'Thunder',
+			MADNESS: 'Madness',
+			MIMIC: 'Mimic',
+			VAMPIRE: 'Vampire',
+			TELE: 'Telekinesis',
+			IMMORTAL: 'Immortal'
+		};
+		
+		var ARTIFACTS_COLORS = {
+			'FIST': COLORS.PINK,
+			'SWORD': COLORS.CYAN,
+			'FIRE': COLORS.ORANGE,
+			'FROST': COLORS.WHITE,
+			'THUNDER': COLORS.BLUE,
+			'MADNESS': COLORS.GREEN,
+			'MIMIC': COLORS.GRAY,
+			'VAMPIRE': COLORS.RED,
+			'TELE': COLORS.VIOLET,
+			'IMMORTAL': COLORS.PURPLE
+		};
+		
+		var SKILLS_COLORS = {
+			'SPEED': COLORS.CYAN,
+			'POWER': COLORS.RED,
+			'HEALTH': COLORS.ORANGE,
+			'INTELLECT': COLORS.VIOLET
+		};	
+		
+		var ITEMS_POSITION_SHIFT = {
+			'FIST': {
+				x: 0,
+				y: -48
+			},
+			'SWORD': {
+				x: 32,
+				y: -48
+			},
+			'FIRE': {
+				x: 64,
+				y: -48
+			},
+			'FROST': {
+				x: 0,
+				y: 0
+			},
+			'THUNDER': {
+				x: 32,
+				y: 0
+			},
+			'MADNESS': {
+				x: 64,
+				y: 0
+			},
+			'MIMIC': {
+				x: 0,
+				y: 48
+			},
+			'VAMPIRE': {
+				x: 32,
+				y: 48
+			},
+			'TELE': {
+				x: 64,
+				y: 48
+			},
+			'IMMORTAL': {
+				x: 32,
+				y: 96
+			}
+		}
+		
+		var SKILLS_POSITION_SHIFT = {
+			'SPEED': {
+				x: 0,
+				y: -48
+			},
+			'POWER': {
+				x: 0,
+				y: 0
+			},
+			'HEALTH': {
+				x: 0,
+				y: 48
+			},
+			'INTELLECT': {
+				x: 0,
+				y: 96
+			}
+		}
+		
+		var storedAvailableSkillsForCurrentTrading = [];
+		
+		var currentItemCursorPosition = {x: 0, y: 0};
+		var selectedItem = ARTIFACTS.FIST;
+		
+		var currentSkillCursorPosition = {x: 0, y: 0};
+		var selectedSkill = null;
+		
+		var inShop = false;
+		var canBuyAction = false;
+		
+		var currentPlayerSkillLevels = {
+			'SPEED': 0,
+			'POWER': 0,
+			'HEALTH': 0,
+			'INTELLECT': 0
+		}
+		
+		var playerSkillLevelsCost = {
+			'SPEED': [300, 600, 1200, 2500, 5000],
+			'POWER': [300, 600, 1200, 2500, 5000],
+			'HEALTH': [300, 600, 1200, 2500, 5000],
+			'INTELLECT': [300, 600, 1200, 2500, 5000]
+		}
+		
+		var playerSkillLevelsChanges = {
+			'SPEED': 25,
+			'POWER': 5,
+			'HEALTH': 25,
+			'INTELLECT': 5000
+		}
+		
+		function getValues(object) {
+			var values = [];
+			Object.keys(object).forEach((key) => {
+				values.push(object[key]);
+			})
+			return values;
+		}
+		
+		function buySkill(selectedSkill) {
+		
+			if (!storedAvailableSkillsForCurrentTrading[selectedSkill]) {
+				return;
+			}
+		
+			clearTimeout(buySkillTimeout);
+			canBuyAction = false;
+			buySkillTimeout = setTimeout(()=>{
+				canBuyAction = true
+			}, 1000);
+
+			if (currentPlayerSkillLevels[selectedSkill] === 5) {
+				popupMessage("Maximum " + selectedSkill + " level", player);
+				return;
+			}
+			if (playerSkillLevelsCost[selectedSkill][currentPlayerSkillLevels[selectedSkill]] <= score) {
+				score = score - playerSkillLevelsCost[selectedSkill][currentPlayerSkillLevels[selectedSkill]];
+				switch (selectedSkill) {
+					case SKILLS.SPEED: {
+						playerStep = playerStep + playerSkillLevelsChanges[SKILLS.SPEED];
+						break;
+					}
+					case SKILLS.POWER: {
+						playerAttack = playerAttack + playerSkillLevelsChanges[SKILLS.POWER];
+						break;
+					}
+					case SKILLS.HEALTH: {
+						maxPlayerLife = maxPlayerLife + playerSkillLevelsChanges[SKILLS.HEALTH];
+						player.life = maxPlayerLife;
+						break;
+					}
+					case SKILLS.INTELLECT: {
+						playerIntellect = playerIntellect + playerSkillLevelsChanges[SKILLS.INTELLECT];
+						break;
+					}
+					default: {
+					}
+				}
+				currentPlayerSkillLevels[selectedSkill]++;
+				refreshTick(0);
+				refreshHealthText();
+				popupMessage(selectedSkill + " skill increased", player);
+				refreshSkillInfoText();
+			} else {
+				popupMessage("Lack of ticks :(", player);
+			}
+			
+		}
+		
+		function resetSelectedItem() {
+			selectedItem = ARTIFACTS.FIST;
+			currentItemCursorPosition = {x: 0, y: 0};
+		}
+		
+		var itemMatrix = [
+			[ARTIFACTS.FIST,  ARTIFACTS.SWORD, 	 ARTIFACTS.FIRE],
+			[ARTIFACTS.FROST, ARTIFACTS.THUNDER, ARTIFACTS.MADNESS],
+			[ARTIFACTS.MIMIC, ARTIFACTS.VAMPIRE, ARTIFACTS.TELE],
+			[null, 			  ARTIFACTS.IMMORTAL, null]
+		];
+		
+		var skillMatrix = [
+			[SKILLS.SPEED],
+			[SKILLS.POWER],
+			[SKILLS.HEALTH],
+			[SKILLS.INTELLECT]
+		];
+		
+		function inventorySelect(keyboardCursors, itemMatrix, currentCursorPosition) {
+		
+			if (!currentCursorPosition) {
+				currentCursorPosition = {x: 0, y: 0};
+			}
+			
+			function foo(item, position, action) {
+				return {
+					selectedItem: item,
+					currentPosition: position,
+					action: action
+				}
+			}
+			
+			if (cursors.left.isDown && currentCursorPosition.x > 0) {
+				return foo(itemMatrix[currentCursorPosition.y][currentCursorPosition.x-1], {x: currentCursorPosition.x-1, y: currentCursorPosition.y});
+			}
+			if (cursors.right.isDown && currentCursorPosition.x < itemMatrix[0].length) {
+				return foo(itemMatrix[currentCursorPosition.y][currentCursorPosition.x+1], {x: currentCursorPosition.x+1, y: currentCursorPosition.y});
+			}
+			if (cursors.up.isDown && currentCursorPosition.y > 0) {
+				return foo(itemMatrix[currentCursorPosition.y-1][currentCursorPosition.x], {x: currentCursorPosition.x, y: currentCursorPosition.y-1});
+			}
+			if (cursors.down.isDown && currentCursorPosition.y < itemMatrix.length-1) {
+				return foo(itemMatrix[currentCursorPosition.y+1][currentCursorPosition.x], {x: currentCursorPosition.x, y: currentCursorPosition.y+1});
+			}
+			if (space.isDown) {
+				return foo(itemMatrix[currentCursorPosition.y][currentCursorPosition.x], {x: currentCursorPosition.x, y: currentCursorPosition.y}, true);
+			}
+			
+			return foo(itemMatrix[currentCursorPosition.y][currentCursorPosition.x], {x: currentCursorPosition.x, y: currentCursorPosition.y});
+			
+		}
+		
+		function switchSelectedItem(selectedItem) {
+			switch(selectedItem) {
+				case ARTIFACTS.FIST: {
+					setDefaultMode();
+					return;
+				}
+				case ARTIFACTS.SWORD: {
+					setSwordMode();
+					return;
+				}
+				case ARTIFACTS.FIRE: {
+					setFireMode();
+					return;
+				}
+				case ARTIFACTS.FROST: {
+					setFrostMode();
+					return;
+				}
+				case ARTIFACTS.THUNDER: {
+					setThunderMode();
+					return;
+				}
+				case ARTIFACTS.MADNESS: {
+					setMadnessMode();
+					return;
+				}
+				case ARTIFACTS.MIMIC: {
+					processMimicMode();
+					return;
+				}
+				case ARTIFACTS.VAMPIRE: {
+					processVampireMode();
+					return;
+				}
+				case ARTIFACTS.TELE: {
+					processTeleMode();
+					return;
+				}
+				case ARTIFACTS.IMMORTAL: {
+					processImmortalMode();
+					return;
+				}
+				default: {
+					return;
+				}
+			}
+		}
+		
+		function getCharacterReplicByType(type) {
+			var replics = ENEMY_REPLICS[type]
+			var ran = getRandomInt(0, replics.length-1);
+			return replics[ran];
+		}
+		
+		function getColor(colorsObject, color) {
+		
+			function getcolorKeysLenghtWithoutRanValue(colorKeys) {
+				return colorKeys.length-3;
+			}
+		
+			if (color != colorsObject.RAN && color != colorsObject.WRAN) {
+				return color;
+			}
+			
+			if (color == colorsObject.RAN) {
+				var colorKeys = Object.keys(colorsObject);
+				var ranColor = colorKeys[getRandomInt(0, getcolorKeysLenghtWithoutRanValue(colorKeys))]
+				return colorsObject[ranColor];
+			}
+			
+			if (color == colorsObject.WRAN) {
+				var wColors = [COLORS.RED, COLORS.DARK_GREEN, COLORS.BLUE, BLACK_COLOR];				
+				var wranColor = wColors[getRandomInt(0, wColors.length-1)]				
+				return wranColor;
+			}
+
+		}
+		
+		var PLAYER_MODES = {
+			DEFAULT: 'default_mode',
+			SWORD: 'sword_mode',
+			FIRE: 'fire_mode',
+			THUNDER: 'thunder_mode',
+			FROST: 'frost_mode',
+			MADNESS: 'madness-mode',
+			TELEKINESIS: 'telekinesis_mode',
+			MIMIC: 'mimic_mode',
+			VAMPIRE: 'vampire_mode',
+			IMMORTAL: 'immortal_mode'
+			
+		}
+		
+		var ENEMY_SKILLS = {
+			HUNT: 'hunt_skill',
+			FIRE: 'fire',
+			FROST: 'frost',
+			FORSE: 'forse',
+			ALLY: 'ally',
+			TRADE: 'trade',
+			THUNDER: 'thunder'
+		}
+		
+		var OPEN_EXIT_COLORS = {
+			BLUE: [0,1,2,1,0],
+			RED: [3,4,5,4,3],
+			YELLOW: [6,7,8,7,6],
+			GREEN: [9,10,11,10,9],
+			WHITE: [12,13,14,13,12],
+			PURPLE: [15,16,17,16,15],
+			BLACK: [18,19,20,19,18],
+			RAN: 'RANDOM_COLOR'
+		}
+		
+		var CLOSED_EXIT_COLORS = {
+			BLUE: [0],
+			RED: [3],
+			YELLOW: [6],
+			GREEN: [9],
+			WHITE: [12],
+			PURPLE: [15],
+			BLACK: [18],
+			RAN: 'RANDOM_COLOR'
+		}	
+		
+		var levelKeysList = [];
+		var levelKeysCnt = 0;
+		
+		var chapterLevelTypes = {
+			'1': [2, 3, 4, 5, 6],
+			'2': [7, 8, 9, 10],
+			'3': [11, 12, 13, 14, 15],
+			'4': [19, 20, 21, 22],
+			'5': [23, 24, 25, 26],
+			'6': [27, 28, 29, 30],
+			'7': [31]
+		};
+		
+		var levelTypes = [
+			{
+				id: -1,
+				name: 'Failed reboot',
+				wall: 'wall0',
+				'wall-anima': 'wall-anima0',
+				'wall-anima-chance': 25,
+				floor: 'floor0',
+				robo: COLORS.ORANGE,
+				enemies: [ENEMIES.MODULE],
+				enemy: COLORS.RED,
+				figure: COLORS.GREEN,
+				exit: OPEN_EXIT_COLORS.BLUE,
+				'exit-closed': CLOSED_EXIT_COLORS.BLUE,
+				key: COLORS.BLUE,
+				info: COLORS.RED
+			},
+			{
+				id: 0,
+				name: 'Helheim',
+				wall: 'wall8',
+				'wall-anima': 'wall-anima8',
+				floor: 'floor8',
+				robo: COLORS.YELLOW,
+				enemies: [ENEMIES.VIKING, ENEMIES.KONUNGR],
+				enemy: COLORS.CYAN,
+				figure: COLORS.BLUE,
+				exit: OPEN_EXIT_COLORS.YELLOW,
+				'exit-closed': CLOSED_EXIT_COLORS.YELLOW,
+				key: COLORS.YELLOW,
+				menu: COLORS.YELLOW,
+				info: COLORS.YELLOW
+			},
+			{
+				id: 1,
+				name: 'Imagined Forest',
+				wall: 'wall10',
+				'wall-anima': 'wall-anima10',
+				'wall-anima-chance': 10,				
+				'wall-anima-speed': 3,
+				floor: 'floor10',
+				enemies: [ENEMIES.WOLF, ENEMIES.FLY, ENEMIES.SPIDER, ENEMIES.TIN, ENEMIES.IRON, ENEMIES.RABBIT, ENEMIES.CATERPILLAR, ENEMIES.FOX],
+				robo: COLORS.VIOLET,
+				enemy: COLORS.RED,
+				figure: COLORS.CYAN,
+				exit: OPEN_EXIT_COLORS.PURPLE,
+				'exit-closed': CLOSED_EXIT_COLORS.PURPLE,
+				key: COLORS.PURPLE,
+				info: COLORS.VIOLET
+			},			
+			{
+				id: 2,
+				name: 'Diamond mines',
+				wall: 'wall',
+				'wall-anima': 'wall-anima',
+				floor: 'floor',
+				robo: COLORS.BLUE,
+				enemy: COLORS.GREEN,
+				figure: COLORS.YELLOW,
+				exit: OPEN_EXIT_COLORS.RED,
+				'exit-closed': CLOSED_EXIT_COLORS.RED,
+				key: COLORS.RED,
+				info: COLORS.BLUE
+			},
+			{
+				id: 3,
+				name: 'Electric ocean',
+				wall: 'wall2',
+				'wall-anima': 'wall-anima2',
+				'wall-anima-chance': 60,
+				floor: 'floor2',
+				robo: COLORS.RED,
+				enemy: COLORS.ORANGE,
+				figure: COLORS.GREEN,
+				exit: OPEN_EXIT_COLORS.PURPLE,
+				'exit-closed': CLOSED_EXIT_COLORS.PURPLE,
+				key: COLORS.PURPLE,
+				info: COLORS.RED
+			},
+			{
+				id: 4,
+				name: 'Cross Jungle',
+				wall: 'wall3',
+				'wall-anima': 'wall-anima3',
+				floor: 'floor3',
+				robo: COLORS.YELLOW,
+				enemy: COLORS.RED,
+				figure: COLORS.BLUE,
+				exit: OPEN_EXIT_COLORS.PURPLE,
+				'exit-closed': CLOSED_EXIT_COLORS.PURPLE,
+				key: COLORS.PURPLE,
+				info: COLORS.YELLOW
+			},
+			{
+				id: 5,
+				name: 'Neural Palace',
+				wall: 'wall4',
+				'wall-anima': 'wall-anima4',				
+				floor: 'floor4',
+				robo: COLORS.GREEN,
+				enemy: COLORS.PURPLE,
+				figure: COLORS.YELLOW,
+				exit: OPEN_EXIT_COLORS.BLUE,
+				'exit-closed': CLOSED_EXIT_COLORS.BLUE,
+				key: COLORS.BLUE,
+				info: COLORS.GREEN
+			},
+			{
+				id: 6,
+				name: "Monk's Cell",
+				wall: 'wall5',
+				floor: 'floor5',
+				robo: COLORS.WHITE,
+				enemy: COLORS.WHITE,
+				figure: COLORS.WHITE,
+				exit: OPEN_EXIT_COLORS.WHITE,
+				'exit-closed': CLOSED_EXIT_COLORS.WHITE,
+				key: COLORS.WHITE,
+				menu: COLORS.WHITE
+			},
+			{
+				id: 7,
+				name: 'Data Hive',
+				wall: 'wall6',
+				floor: 'floor6',
+				'wall-anima': 'wall-anima6',				
+				robo: COLORS.VIOLET,
+				enemy: COLORS.CYAN,
+				figure: COLORS.RED,
+				exit: OPEN_EXIT_COLORS.YELLOW,
+				'exit-closed': CLOSED_EXIT_COLORS.YELLOW,
+				key: COLORS.YELLOW,
+				info: COLORS.VIOLET
+			},
+			{
+				id: 8,
+				name: 'Memory Crystals',
+				wall: 'wall7',
+				'wall-anima': 'wall-anima7',
+				'wall-anima-chance': 30,
+				floor: 'floor7',
+				robo: COLORS.CYAN,
+				enemy: COLORS.YELLOW,
+				figure: COLORS.GREEN,
+				exit: OPEN_EXIT_COLORS.RED,
+				'exit-closed': CLOSED_EXIT_COLORS.RED,
+				key: COLORS.RED,
+				info: COLORS.CYAN
+			},
+			{
+				id: 9,
+				name: 'Cache Flows',
+				wall: 'wall9',
+				'wall-anima': 'wall-anima9',
+				'wall-anima-chance': 10,
+				floor: 'floor9',
+				robo: COLORS.RED,
+				enemy: COLORS.YELLOW,
+				figure: COLORS.CYAN,
+				exit: OPEN_EXIT_COLORS.GREEN,
+				'exit-closed': CLOSED_EXIT_COLORS.GREEN,
+				key: COLORS.GREEN,
+				info: COLORS.RED
+			},
+			{
+				id: 10,
+				name: 'Hard Sector',
+				wall: 'wall11',
+				'wall-anima': 'wall-anima11',
+				'wall-anima-speed': 1,				
+				floor: 'floor11',
+				robo: COLORS.BLUE,
+				enemy: COLORS.GREEN,
+				figure: COLORS.PINK,
+				exit: OPEN_EXIT_COLORS.RED,
+				'exit-closed': CLOSED_EXIT_COLORS.RED,
+				key: COLORS.RED,
+				info: COLORS.BLUE
+			},
+			{
+				id: 11,
+				name: 'Dark Threads',
+				wall: 'wall12',
+				'wall-anima': 'wall-anima12',
+				floor: 'floor12',
+				enemies: [ENEMIES.FLY, ENEMIES.SPIDER, ENEMIES.TIN, ENEMIES.IRON, ENEMIES.SPHERE, ENEMIES.ORB, ENEMIES.SQUARE, ENEMIES.HOUND],
+				robo: COLORS.RED,
+				enemy: COLORS.GREEN,
+				figure: COLORS.PURPLE,
+				exit: OPEN_EXIT_COLORS.YELLOW,
+				'exit-closed': CLOSED_EXIT_COLORS.YELLOW,
+				key: COLORS.YELLOW,
+				info: COLORS.RED
+			},
+			{
+				id: 12,
+				name: 'Mash File Fields',
+				wall: 'wall29',
+				'wall-anima': 'wall-anima29',
+				floor: 'floor29',
+				robo: COLORS.ORANGE,
+				enemy: COLORS.RED,
+				figure: COLORS.GREEN,
+				exit: OPEN_EXIT_COLORS.BLUE,
+				'exit-closed': CLOSED_EXIT_COLORS.BLUE,
+				key: COLORS.BLUE,
+				info: COLORS.ORANGE
+			},
+			{
+				id: 13,
+				name: 'Optical Fiber Swamps',
+				wall: 'wall14',
+				'wall-anima': 'wall-anima14',
+				'wall-anima-chance': 90,
+				floor: 'floor14',
+				robo: COLORS.BLUE,
+				enemy: COLORS.BROWN,
+				figure: COLORS.ORANGE,
+				exit: OPEN_EXIT_COLORS.GREEN,
+				'exit-closed': CLOSED_EXIT_COLORS.GREEN,
+				key: COLORS.GREEN,
+				info: COLORS.BLUE
+			},
+			{
+				id: 14,
+				name: 'Micro Grove',
+				wall: 'wall15',
+				'wall-anima': 'wall-anima15',
+				'wall-anima-chance': 20,
+				floor: 'floor15',
+				robo: COLORS.RED,
+				enemy: COLORS.BLUE,
+				figure: COLORS.CYAN,
+				exit: OPEN_EXIT_COLORS.PURPLE,
+				'exit-closed': CLOSED_EXIT_COLORS.PURPLE,
+				key: COLORS.PURPLE,
+				info: COLORS.RED
+			},
+			{
+				id: 15,
+				name: 'Sinai Files',
+				wall: 'wall16',
+				'wall-anima': 'wall-anima16',
+				floor: 'floor16',
+				robo: COLORS.BLUE,
+				enemy: COLORS.BLUE,
+				figure: COLORS.BLUE,
+				exit: OPEN_EXIT_COLORS.GREEN,
+				'exit-closed': CLOSED_EXIT_COLORS.GREEN,
+				key: COLORS.GREEN,
+				menu: COLORS.GREEN,
+				info: COLORS.GREEN
+			},
+			{
+				id: 16,
+				name: 'Cemetry of Giants',
+				wall: 'wall17',
+				'wall-anima': 'wall-anima17',
+				'wall-anima-chance': 20,				
+				floor: 'floor17',
+				robo: COLORS.RED,
+				enemy: COLORS.RED,
+				figure: COLORS.RED,
+				exit: OPEN_EXIT_COLORS.RED,
+				'exit-closed': CLOSED_EXIT_COLORS.RED,
+				key: COLORS.RED,
+				menu: COLORS.RED,
+				info: COLORS.RED
+			},
+			{
+				id: 17,
+				name: 'Cemetry of Robots',
+				wall: 'wall18',
+				'wall-anima': 'wall-anima18',
+				'wall-anima-chance': 20,				
+				floor: 'floor18',
+				robo: COLORS.CYAN,
+				enemy: COLORS.CYAN,
+				figure: COLORS.CYAN,
+				exit: OPEN_EXIT_COLORS.BLUE,
+				'exit-closed': CLOSED_EXIT_COLORS.BLUE,
+				key: COLORS.CYAN,
+				menu: COLORS.CYAN,
+				info: COLORS.CYAN
+			},
+			{
+				id: 18,
+				name: 'Mother',
+				wall: 'wall19',
+				'wall-anima': 'wall-anima19',
+				'wall-anima-chance': 40,			
+				floor: 'floor19',
+				robo: COLORS.RED,
+				enemy: COLORS.RED,
+				figure: COLORS.RED,
+				exit: OPEN_EXIT_COLORS.RED,
+				'exit-closed': CLOSED_EXIT_COLORS.RED,
+				key: COLORS.RED,
+				menu: COLORS.RED,
+				info: COLORS.RED
+			},
+			{
+				id: 19,
+				name: 'G',
+				wall: 'wall20',			
+				floor: 'floor20',
+				robo: COLORS.GREEN,
+				enemy: COLORS.GREEN,
+				enemies: [ENEMIES.SPACE],
+				figure: COLORS.GREEN,
+				exit: OPEN_EXIT_COLORS.GREEN,
+				'exit-closed': CLOSED_EXIT_COLORS.GREEN,
+				key: COLORS.GREEN,
+				menu: COLORS.GREEN,
+				info: COLORS.GREEN
+			},
+			{
+				id: 20,
+				name: 'Serenity',
+				wall: 'wall21',
+				'wall-anima': 'wall-anima21',
+				'wall-anima-chance': 50,
+				floor: 'floor21',
+				robo: COLORS.WHITE,
+				enemy: COLORS.WHITE,
+				figure: COLORS.WHITE,
+				exit: OPEN_EXIT_COLORS.BLACK,
+				'exit-closed': CLOSED_EXIT_COLORS.BLACK,
+				key: COLORS.WHITE,
+				menu: COLORS.WHITE,
+				'popup-color': COLORS.WRAN,
+				info: COLORS.WHITE
+			},
+			{
+				id: 21,
+				name: 'Bio Cells',
+				wall: 'wall22',
+				'wall-anima': 'wall-anima22',
+				'wall-anima-chance': 80,				
+				floor: 'floor22',
+				robo: COLORS.ORANGE,
+				enemy: COLORS.ORANGE,
+				figure: COLORS.ORANGE,
+				exit: OPEN_EXIT_COLORS.YELLOW,
+				'exit-closed': CLOSED_EXIT_COLORS.YELLOW,
+				key: COLORS.ORANGE,
+				info: COLORS.ORANGE
+			},
+			{
+				id: 22,
+				name: 'Rainbow Madness',
+				wall: 'wall23',
+				floor: 'floor23',
+				robo: COLORS.RAN,
+				enemy: COLORS.RAN,
+				figure: COLORS.RAN,
+				exit: OPEN_EXIT_COLORS.RAN,
+				'exit-closed': CLOSED_EXIT_COLORS.RAN,
+				key: COLORS.RAN,
+				menu: COLORS.RAN,
+				info: COLORS.RAN
+			},
+			{
+				id: 23,
+				name: 'Sand Stars',
+				wall: 'wall24',
+				'wall-anima': 'wall-anima24',
+				'wall-anima-chance': 100,
+				floor: 'floor5',
+				robo: COLORS.YELLOW,
+				enemy: COLORS.YELLOW,
+				figure: COLORS.YELLOW,
+				exit: OPEN_EXIT_COLORS.YELLOW,
+				'exit-closed': CLOSED_EXIT_COLORS.YELLOW,
+				key: COLORS.YELLOW,
+				menu: COLORS.YELLOW,
+				info: COLORS.YELLOW
+			},
+			{
+				id: 24,
+				name: 'Rusty Stuff Spirits',
+				wall: 'wall25',
+				floor: 'floor25',
+				'wall-anima': 'wall-anima25',
+				'wall-anima-chance': 25,
+				robo: COLORS.BLUE,
+				enemy: COLORS.VIOLET,
+				figure: COLORS.YELLOW,
+				exit: OPEN_EXIT_COLORS.GREEN,
+				'exit-closed': CLOSED_EXIT_COLORS.GREEN,
+				key: COLORS.GREEN,
+				info: COLORS.BLUE
+			},
+			{
+				id: 25,
+				name: 'Speed Up Zone',
+				wall: 'wall26',
+				floor: 'floor26',
+				'wall-anima': 'wall-anima26',
+				'wall-anima-chance': 10,
+				robo: COLORS.CYAN,
+				enemy: COLORS.RED,
+				figure: COLORS.YELLOW,
+				exit: OPEN_EXIT_COLORS.PURPLE,
+				'exit-closed': CLOSED_EXIT_COLORS.PURPLE,
+				key: COLORS.PURPLE,
+				info: COLORS.CYAN
+			},
+			{
+				id: 26,
+				name: 'HOPE DOCS',
+				wall: 'wall27',
+				floor: 'floor27',
+				'wall-anima': 'wall-anima27',
+				'wall-anima-chance': 20,
+				robo: COLORS.CYAN,
+				enemy: COLORS.ORANGE,
+				figure: COLORS.RED,
+				exit: OPEN_EXIT_COLORS.GREEN,
+				'exit-closed': CLOSED_EXIT_COLORS.GREEN,
+				key: COLORS.GREEN,
+				info: COLORS.CYAN
+			},
+			{
+				id: 27,
+				name: 'Refregerator',
+				wall: 'wall28',
+				floor: 'floor28',
+				'wall-anima': 'wall-anima28',
+				'wall-anima-chance': 20,
+				robo: COLORS.BLUE,
+				enemy: COLORS.BLUE,
+				figure: COLORS.BLUE,
+				exit: OPEN_EXIT_COLORS.BLUE,
+				'exit-closed': CLOSED_EXIT_COLORS.BLUE,
+				key: COLORS.BLUE,
+				enemies: [ENEMIES.FREEZE],
+				menu: COLORS.BLUE,
+				info: COLORS.BLUE
+			},
+			{
+				id: 28,
+				name: 'Third Installation',
+				wall: 'wall13',
+				'wall-anima': 'wall-anima13',
+				floor: 'floor13',
+				robo: COLORS.ORANGE,
+				enemy: COLORS.GRAY,
+				figure: COLORS.CYAN,
+				exit: OPEN_EXIT_COLORS.BLUE,
+				'exit-closed': CLOSED_EXIT_COLORS.BLUE,
+				key: COLORS.BLUE,
+				info: COLORS.ORANGE
+			},
+			{
+				id: 29,
+				name: 'Panic Lamp',
+				wall: 'wall30',
+				'wall-anima': 'wall-anima30',
+				floor: 'floor30',
+				robo: COLORS.GREEN,
+				enemy: COLORS.GREEN,
+				figure: COLORS.GREEN,
+				exit: OPEN_EXIT_COLORS.GREEN,
+				'exit-closed': CLOSED_EXIT_COLORS.GREEN,
+				key: COLORS.GREEN,
+				info: COLORS.GREEN,
+				menu: COLORS.GREEN
+			},
+			{
+				id: 30,
+				name: 'Silicon Blood',
+				wall: 'wall31',
+				'wall-anima': 'wall-anima31',
+				'wall-anima-chance': 40,
+				floor: 'floor31',
+				robo: COLORS.VIOLET,
+				enemy: COLORS.VIOLET,
+				figure: COLORS.VIOLET,
+				exit: OPEN_EXIT_COLORS.BLUE,
+				'exit-closed': CLOSED_EXIT_COLORS.BLUE,
+				key: COLORS.VIOLET,
+				info: COLORS.VIOLET,
+				menu: COLORS.VIOLET
+			},
+			{
+				id: 31,
+				name: 'Place where you\nwill burn forever',
+				wall: 'wall32',
+				'wall-anima': 'wall-anima32',
+				'wall-anima-chance': 100,
+				floor: 'floor5',
+				robo: COLORS.RED,
+				enemy: COLORS.RED,
+				figure: COLORS.RED,
+				exit: OPEN_EXIT_COLORS.RED,
+				'exit-closed': CLOSED_EXIT_COLORS.RED,
+				key: COLORS.RED,
+				info: COLORS.RED,
+				menu: COLORS.RED
+			}
+		];
+		
+		lvls = levelTypes;
+
+		var isMap = false;
+		
+		var canUpdate = true;
+		
+		var isClicked = false, isClickedTimeout = null, buySkillTimeout = null;
+		var pause = false;
+		var itemsPause = false;
+		var skillsPause = false;
+		
+        var gameFieldWidth = gameDimention * cellSize;
+        var gameFieldHeight = gameDimention * cellSize;
+		
+		var screenWidth = 250;
+		var screenHeigth = 250;
+
+		var game = new Phaser.Game(screenWidth, screenHeigth, Phaser.CANVAS, 'phaser-example', { preload: preload, create: create, update: update, render: render });
+        //var game = new Phaser.Game(gameFieldWidth, gameFieldHeight, Phaser.CANVAS, 'phaser-example', { preload: preload, create: create, update: update, //render: render });
+
+        function preload() {
+
+			game.load.spritesheet('title', 'assets/paint/title/title' + (getRandomInt(1, 10) > 9 ?'-2': (getRandomInt(1, 100) == 53 ? '-3' : '')) + '.png', 250, 250);
+			game.load.spritesheet('finale', 'assets/paint/final/alice-zx.png');
+			game.load.spritesheet('loading', 'assets/paint/loading/loading.png');
+			game.load.spritesheet('scene-hands', 'assets/paint/scenes/scene-hands.png');
+            game.load.spritesheet('robo', 'assets/paint/main/robo.png', 32, 48);  
+			game.load.spritesheet('robo-vampire', 'assets/paint/main/robo-vampire.png', 32, 48);  
+			
+			game.load.spritesheet('scene-1', 'assets/paint/scenes/scene-1.png');
+			game.load.spritesheet('scene-2', 'assets/paint/scenes/scene-2.png');
+			game.load.spritesheet('scene-3', 'assets/paint/scenes/scene-3.png');
+			
+			game.load.spritesheet('scene-4', 'assets/paint/scenes/scene-4.png');
+			game.load.spritesheet('scene-5', 'assets/paint/scenes/scene-5.png');
+			game.load.spritesheet('scene-6', 'assets/paint/scenes/scene-6.png');
+
+			game.load.spritesheet('scene-7', 'assets/paint/scenes/scene-7.png');
+			game.load.spritesheet('scene-8', 'assets/paint/scenes/scene-8.png');
+			
+			game.load.spritesheet('scene-robo', 'assets/paint/scenes/scene-robo.png');
+			game.load.spritesheet('scene-eyes', 'assets/paint/scenes/scene-eyes.png');
+			game.load.spritesheet('scene-robo-right', 'assets/paint/scenes/scene-robo-right.png');
+			game.load.spritesheet('scene-syslog', 'assets/paint/scenes/scene-syslog.png');
+			game.load.spritesheet('scene-syslog-left', 'assets/paint/scenes/scene-syslog-left.png');
+			game.load.spritesheet('scene-defraga', 'assets/paint/scenes/scene-defraga.png');
+			game.load.spritesheet('scene-defraga-left', 'assets/paint/scenes/scene-defraga-left.png');
+			
+			game.load.spritesheet('scene-tele-call', 'assets/paint/scenes/scene-tele-call.png');
+			game.load.spritesheet('2h', 'assets/paint/scenes/2h.png');
+			
+			game.load.spritesheet('scene-afterdeath', 'assets/paint/scenes/scene-afterdeath.png');
+			game.load.spritesheet('scene-gc', 'assets/paint/scenes/scene-gc.png');
+			game.load.spritesheet('scene-gc-left', 'assets/paint/scenes/scene-gc-left.png');
+			
+			game.load.spritesheet('merchant', 'assets/paint/enemies/merchant.png', 32, 48);  
+			
+			game.load.spritesheet(ENEMIES.MODULE, 'assets/paint/enemies/module.png', 32, 48);
+            game.load.spritesheet(ENEMIES.IRON, 'assets/paint/enemies/iron.png', 32, 48);
+			game.load.spritesheet(ENEMIES.TOWER, 'assets/paint/enemies/tower.png', 32, 48);
+			game.load.spritesheet(ENEMIES.FLY, 'assets/paint/enemies/fly.png', 32, 48);
+			game.load.spritesheet(ENEMIES.SPIDER, 'assets/paint/enemies/spider.png', 32, 48);
+			game.load.spritesheet(ENEMIES.TIN, 'assets/paint/enemies/tin.png', 32, 48);			
+			game.load.spritesheet(ENEMIES.VIKING, 'assets/paint/enemies/viking.png', 32, 48);
+			game.load.spritesheet(ENEMIES.KONUNGR, 'assets/paint/enemies/viking.png', 32, 48);
+			
+			game.load.spritesheet(ENEMIES.ORB, 'assets/paint/enemies/orb.png', 32, 48);  
+			game.load.spritesheet(ENEMIES.SQUARE, 'assets/paint/enemies/square.png', 32, 48);
+			game.load.spritesheet(ENEMIES.HOUND, 'assets/paint/enemies/hound.png', 32, 48);
+			game.load.spritesheet(ENEMIES.WOLF, 'assets/paint/enemies/wolf.png', 32, 48);
+			game.load.spritesheet(ENEMIES.RABBIT, 'assets/paint/enemies/rabbit.png', 32, 48);
+			game.load.spritesheet(ENEMIES.SPHERE, 'assets/paint/enemies/sphere.png', 32, 48);
+			game.load.spritesheet(ENEMIES.CATERPILLAR, 'assets/paint/enemies/caterpillar.png', 32, 48);			
+			
+			game.load.spritesheet(ENEMIES.WASP, 'assets/paint/enemies/wasp.png', 32, 48);
+			game.load.spritesheet(ENEMIES.FOX, 'assets/paint/enemies/fox.png', 32, 48);
+			game.load.spritesheet(ENEMIES.FREEZE, 'assets/paint/enemies/freeze.png', 32, 48);
+			
+			game.load.spritesheet(ENEMIES.RINO, 'assets/paint/enemies/rino.png', 32, 48);
+			game.load.spritesheet(ENEMIES.GENERATOR, 'assets/paint/enemies/generator-2.png', 32, 48);
+			game.load.spritesheet(ENEMIES.DINO, 'assets/paint/enemies/dino.png', 32, 48);
+			
+			game.load.spritesheet(ENEMIES.SPACE, 'assets/paint/enemies/space.png', 32, 48);
+			
+            game.load.spritesheet('exit', 'assets/paint/main/exit.png', 48, 48);
+			game.load.spritesheet('icons', 'assets/paint/ui/items.png', 32, 48);
+			game.load.spritesheet('button', 'assets/paint/ui/icons.png', 32, 48);
+			
+			game.load.spritesheet('sword-magic', 'assets/paint/magic/sword-magic.png', 32, 48);			
+			game.load.spritesheet('fire-magic', 'assets/paint/magic/fire-magic.png', 32, 48);
+			game.load.spritesheet('frost-magic', 'assets/paint/magic/frost-magic.png', 32, 48);
+			game.load.spritesheet('thunder-magic', 'assets/paint/magic/thunder-magic.png', 32, 48);
+			game.load.spritesheet('madness-magic', 'assets/paint/magic/madness-magic.png', 32, 48);
+			game.load.spritesheet('telekinesis-magic', 'assets/paint/magic/telekinesis-magic.png', 32, 48);
+			
+			game.load.spritesheet('transistor', 'assets/paint/items/transistor.png', 48, 48);			
+			game.load.spritesheet('micro', 'assets/paint/items/micro.png', 48, 48);
+			game.load.spritesheet('cpu', 'assets/paint/items/cpu.png', 48, 48);
+			game.load.spritesheet('mega', 'assets/paint/items/mega.png', 48, 48);
+			game.load.spritesheet('life', 'assets/paint/items/life.png', 48, 48);
+			game.load.spritesheet('super-life', 'assets/paint/items/super-life.png', 48, 48);
+			game.load.spritesheet('key', 'assets/paint/items/key.png', 48, 48);
+			game.load.spritesheet('compass', 'assets/paint/items/compass.png', 48, 48);
+			game.load.spritesheet('file', 'assets/paint/items/file.png', 48, 48);			
+			
+			game.load.spritesheet('sword', 'assets/paint/items/sword.png', 48, 48);
+			game.load.spritesheet('fire', 'assets/paint/items/fire.png', 48, 48);
+			game.load.spritesheet('frost', 'assets/paint/items/frost.png', 48, 48);
+			game.load.spritesheet('thunder', 'assets/paint/items/thunder.png', 48, 48);
+			game.load.spritesheet('madness', 'assets/paint/items/madness.png', 48, 48);
+			game.load.spritesheet('mimic', 'assets/paint/items/mimic.png', 48, 48);
+			game.load.spritesheet('vampire', 'assets/paint/items/vampire.png', 48, 48);
+			game.load.spritesheet('tele', 'assets/paint/items/tele.png', 48, 48);
+			game.load.spritesheet('immortal', 'assets/paint/items/immortal.png', 48, 48);
+
+			game.load.image('wall0', 'assets/paint/walls/wall0.png');
+            game.load.image('wall', 'assets/paint/walls/wall.png');
+			game.load.spritesheet('wall-anima0', 'assets/paint/walls/wall-anima0.png', 48, 48);
+			game.load.spritesheet('wall-anima', 'assets/paint/walls/wall-anima.png', 48, 48);
+			game.load.image('wall2', 'assets/paint/walls/wall2.png');
+			game.load.spritesheet('wall-anima2', 'assets/paint/walls/wall-anima2.png', 48, 48);
+			game.load.image('wall3', 'assets/paint/walls/wall3.png');
+			game.load.spritesheet('wall-anima3', 'assets/paint/walls/wall-anima3.png', 48, 48);
+			game.load.image('wall4', 'assets/paint/walls/wall4.png');
+			game.load.spritesheet('wall-anima4', 'assets/paint/walls/wall-anima4.png', 48, 48);
+			game.load.image('wall5', 'assets/paint/walls/wall5.png');
+			game.load.image('wall6', 'assets/paint/walls/wall6.png');
+			game.load.spritesheet('wall-anima6', 'assets/paint/walls/wall-anima6.png', 48, 48);			
+			game.load.image('wall7', 'assets/paint/walls/wall7.png');
+			game.load.image('wall8', 'assets/paint/walls/wall8.png');
+			game.load.spritesheet('wall-anima8', 'assets/paint/walls/wall-anima8.png', 48, 48);
+			game.load.image('wall9', 'assets/paint/walls/wall9.png');
+			game.load.spritesheet('wall-anima9', 'assets/paint/walls/wall-anima9.png', 48, 48);
+			game.load.image('wall10', 'assets/paint/walls/wall10.png');
+			game.load.spritesheet('wall-anima10', 'assets/paint/walls/wall-anima10.png', 48, 48);
+			game.load.image('wall11', 'assets/paint/walls/wall11.png');
+			game.load.spritesheet('wall-anima11', 'assets/paint/walls/wall-anima11.png', 48, 48);
+			game.load.image('wall12', 'assets/paint/walls/wall12.png');
+			game.load.spritesheet('wall-anima12', 'assets/paint/walls/wall-anima12.png', 48, 48);
+			game.load.image('wall13', 'assets/paint/walls/wall13.png');
+			game.load.spritesheet('wall-anima13', 'assets/paint/walls/wall-anima13' + (getRandomInt(1, 100)>95?'-spec':'') + '.png', 48, 48);			
+			game.load.image('wall14', 'assets/paint/walls/wall14.png');
+			game.load.spritesheet('wall-anima14', 'assets/paint/walls/wall-anima14.png', 48, 48);
+			game.load.image('wall15', 'assets/paint/walls/wall15.png');			
+			game.load.spritesheet('wall-anima15', 'assets/paint/walls/wall-anima15.png', 48, 48);
+			game.load.image('wall16', 'assets/paint/walls/wall16.png');			
+			game.load.spritesheet('wall-anima16', 'assets/paint/walls/wall-anima16.png', 48, 48);			
+			game.load.image('wall17', 'assets/paint/walls/wall17.png');
+			game.load.spritesheet('wall-anima17', 'assets/paint/walls/wall-anima17.png', 48, 48);
+			game.load.image('wall18', 'assets/paint/walls/wall18.png');
+			game.load.spritesheet('wall-anima18', 'assets/paint/walls/wall-anima18.png', 48, 48);
+			game.load.image('wall19', 'assets/paint/walls/wall19.png');
+			game.load.spritesheet('wall-anima19', 'assets/paint/walls/wall-anima19.png', 48, 48);
+			game.load.image('wall20', 'assets/paint/walls/wall20.png');
+			game.load.image('wall21', 'assets/paint/walls/wall21.png');
+			game.load.spritesheet('wall-anima21', 'assets/paint/walls/wall-anima21.png', 48, 48);
+			game.load.image('wall22', 'assets/paint/walls/wall22.png');
+			game.load.spritesheet('wall-anima22', 'assets/paint/walls/wall-anima22.png', 48, 48);
+			game.load.spritesheet('wall-anima24', 'assets/paint/walls/wall-anima24.png', 48, 48);
+			game.load.spritesheet('wall-anima25', 'assets/paint/walls/wall-anima25.png', 48, 48);
+			game.load.spritesheet('wall-anima26', 'assets/paint/walls/wall-anima26.png', 48, 48);
+			game.load.spritesheet('wall-anima27', 'assets/paint/walls/wall-anima27.png', 48, 48);
+			game.load.spritesheet('wall-anima28', 'assets/paint/walls/wall-anima28.png', 48, 48);
+			game.load.spritesheet('wall-anima30', 'assets/paint/walls/wall-anima30.png', 48, 48);
+			game.load.spritesheet('wall-anima31', 'assets/paint/walls/wall-anima31.png', 48, 48);
+			game.load.spritesheet('wall-anima32', 'assets/paint/walls/wall-anima32.png', 48, 48);
+			game.load.image('wall23', 'assets/paint/walls/wall23.png');
+			game.load.image('wall24', 'assets/paint/walls/wall24' + (getRandomInt(1, 100)>95?'-spec':'') + '.png');
+			game.load.image('wall25', 'assets/paint/walls/wall25.png');
+			game.load.image('wall26', 'assets/paint/walls/wall26.png');
+			game.load.image('wall27', 'assets/paint/walls/wall27.png');
+			game.load.image('wall28', 'assets/paint/walls/wall28.png');
+			game.load.image('wall29', 'assets/paint/walls/wall29.png');
+			game.load.image('wall30', 'assets/paint/walls/wall30.png');
+			game.load.image('wall31', 'assets/paint/walls/wall31.png');
+			game.load.image('wall32', 'assets/paint/walls/wall32.png');
+			game.load.spritesheet('wall-anima7', 'assets/paint/walls/wall-anima7.png', 48, 48);
+			game.load.spritesheet('wall-anima29', 'assets/paint/walls/wall-anima29.png', 48, 48);
+			game.load.image('floor0', 'assets/paint/floors/floor0.png');
+            game.load.image('floor', 'assets/paint/floors/floor.png');
+			game.load.image('floor2', 'assets/paint/floors/floor2.png');
+			game.load.image('floor3', 'assets/paint/floors/floor3.png');
+			game.load.image('floor4', 'assets/paint/floors/floor4.png');
+			game.load.image('floor5', 'assets/paint/floors/floor5.png');
+			game.load.image('floor6', 'assets/paint/floors/floor6.png');
+			game.load.image('floor7', 'assets/paint/floors/floor7.png');
+			game.load.image('floor8', 'assets/paint/floors/floor8.png');
+			game.load.image('floor9', 'assets/paint/floors/floor9.png');
+			game.load.image('floor10', 'assets/paint/floors/floor10.png');
+			game.load.image('floor11', 'assets/paint/floors/floor11.png');
+			game.load.image('floor12', 'assets/paint/floors/floor12.png');
+			game.load.image('floor13', 'assets/paint/floors/floor13.png');
+			game.load.image('floor14', 'assets/paint/floors/floor14.png');
+			game.load.image('floor15', 'assets/paint/floors/floor15.png');
+			game.load.image('floor16', 'assets/paint/floors/floor16.png');
+			game.load.image('floor17', 'assets/paint/floors/floor17.png');
+			game.load.image('floor18', 'assets/paint/floors/floor18.png');
+			game.load.image('floor19', 'assets/paint/floors/floor19.png');
+			game.load.image('floor20', 'assets/paint/floors/floor20.png');
+			game.load.image('floor21', 'assets/paint/floors/floor21.png');
+			game.load.image('floor22', 'assets/paint/floors/floor22.png');
+			game.load.image('floor23', 'assets/paint/floors/floor23.png');
+			game.load.image('floor25', 'assets/paint/floors/floor25.png');
+			game.load.image('floor26', 'assets/paint/floors/floor26.png');
+			game.load.image('floor27', 'assets/paint/floors/floor27.png');
+			game.load.image('floor28', 'assets/paint/floors/floor28.png');
+			game.load.image('floor29', 'assets/paint/floors/floor29.png');
+			game.load.image('floor30', 'assets/paint/floors/floor30.png');
+			game.load.image('floor31', 'assets/paint/floors/floor31.png');
+        }
+
+        var player, magic;
+        var space, one, two, three, four, five, six, seven, eight, nine, zero, m, i;
+		var mIsPressed = false;
+		
+		//one-button-control : begin
+		var isTouched = false;
+		
+		function Down() {
+			isTouched = true;
+		}
+		
+		function Up() {
+			isTouched = false;
+		}
+		//one-button-control : end
+
+		function processUpdate() {
+			setInterval(function() {
+				canUpdate = !canUpdate;
+			}, 250)
+		}		
+		
+        function create() {
+
+            game.physics.startSystem(Phaser.Physics.ARCADE);
+			
+			game.input.onDown.add(Down, this);
+			game.input.onUp.add(Up, this);
+
+            platforms = game.add.group();            
+            floors = game.add.group(); 
+            platforms.enableBody = true;
+
+            transistors = game.add.group();
+            transistors.enableBody = true;			
+            micros = game.add.group();
+            micros.enableBody = true;
+            cpus = game.add.group();
+            cpus.enableBody = true;
+            megas = game.add.group();
+            megas.enableBody = true;
+			
+            files = game.add.group();
+            files.enableBody = true;
+			
+            mainFiles = game.add.group();
+            mainFiles.enableBody = true;
+			
+            artifacts = game.add.group();
+            artifacts.enableBody = true;						
+
+            compasses = game.add.group();
+            compasses.enableBody = true;			
+			
+            lifes = game.add.group();
+            lifes.enableBody = true;
+            superLifes = game.add.group();
+            superLifes.enableBody = true;			
+			
+            keys = game.add.group();
+            keys.enableBody = true;			
+
+            game.world.setBounds(0, 0, gameFieldWidth, gameFieldHeight);            
+            player = game.add.sprite(0, 0, 'robo');
+			player.isPlayer = true;
+            player.life = beginPlayerLife;
+            player.getCenter = ()=>{
+                return {
+                    x: player.x + 16,
+                    y: player.y + 24
+                }
+            }
+			
+			magic = game.add.sprite(0, 0, 'fire-magic');						
+            
+            game.physics.arcade.enable(player);
+
+            player.body.collideWorldBounds = true;
+			//player.body.drag.setTo(100);
+            player.animations.add(ANIMATIONS.LEFT, [0, 1, 2, 3], 10, true);
+            player.animations.add(ANIMATIONS.RIGHT, [5, 6, 7, 8], 10, true);
+            player.animations.add(ANIMATIONS.PUNCH_LEFT, [9, 10, 11], 10, true);
+            player.animations.add(ANIMATIONS.PUNCH_RIGHT, [12, 13, 14], 10, true);
+            player.animations.add(ANIMATIONS.DAMAGE, [15, 16], 10, true);
+            player.animations.add(ANIMATIONS.DEATH, [17, 18, 19, 20], 5, false);
+			
+			magic.animations.add(ANIMATIONS.SHOW, [1, 2, 3, 4, 5, 6], 5, true);
+			magic.animations.add(ANIMATIONS.HIDE, [0], 5, false);
+
+            cursors = game.input.keyboard.createCursorKeys();
+            space = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+			one = game.input.keyboard.addKey(Phaser.Keyboard.ONE);
+			two = game.input.keyboard.addKey(Phaser.Keyboard.TWO);
+			three = game.input.keyboard.addKey(Phaser.Keyboard.THREE);
+			four = game.input.keyboard.addKey(Phaser.Keyboard.FOUR);
+			five = game.input.keyboard.addKey(Phaser.Keyboard.FIVE);
+			six = game.input.keyboard.addKey(Phaser.Keyboard.SIX);
+			seven = game.input.keyboard.addKey(Phaser.Keyboard.SEVEN);
+			eight = game.input.keyboard.addKey(Phaser.Keyboard.EIGHT);
+			nine = game.input.keyboard.addKey(Phaser.Keyboard.NINE);
+			zero = game.input.keyboard.addKey(Phaser.Keyboard.ZERO);
+			
+			m = game.input.keyboard.addKey(Phaser.Keyboard.M);
+			i = game.input.keyboard.addKey(Phaser.Keyboard.I);
+
+            game.camera.follow(player);
+
+            exit = game.add.sprite(0, 0, 'exit');
+            game.physics.arcade.enable(exit);
+            exit.body.immovable = true;
+			
+			initIcons();
+			initSkillInfoText();
+
+            //scoreText = game.add.text(16, 16, 'Tick: 0', { fontSize: fontSizeStr, fill: '#FFF' });
+			scoreText = game.add.text(16, 16, '@ 0', { fontSize: fontSizeStr, fill: '#FFF' });
+			scoreText.stroke = 'black';
+			scoreText.strokeThickness = 5;
+            //scoreText.fixedToCamera = true;
+            //healthText = game.add.text(16, 32, 'Health: ' + player.life, { fontSize: fontSizeStr, fill: '#FFF' });
+			healthText = game.add.text(16, 32, '♥ ' + player.life, { fontSize: fontSizeStr, fill: '#FFF' });			
+			healthText.stroke = 'black';
+			healthText.strokeThickness = 5;
+            //healthText.fixedToCamera = true;
+            //modeText = game.add.text(16, 48, 'Mode is: ' + PLAYER_MODES.DEFAULT, { fontSize: fontSizeStr, fill: '#FFF' });
+            //modeText.fixedToCamera = true;			
+            //enemyHealthText = game.add.text(16, 64, 'Enemy: ', { fontSize: fontSizeStr, fill: '#FFF' });
+			enemyHealthText = game.add.text(16, 48, 'Enemy: ', { fontSize: fontSizeStr, fill: '#FFF' });
+			enemyHealthText.stroke = 'black';
+			enemyHealthText.strokeThickness = 5;
+            //enemyHealthText.fixedToCamera = true;
+            enemyHealthText.visible = false;
+			
+			storyText = game.add.text(16, 48, '', { fontSize: fontSizeStr, fill: '#FFF' });
+			storyText.visible = false;
+			storyText.inputEnabled = true;
+			storyText.events.onInputDown.add(storyClickListener, this);
+			
+			showTitle();
+			//buildLevel();
+			
+            game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+            game.scale.pageAlignHorizontally = true;        
+            game.scale.pageAlignVertically = true;
+			
+			processUpdate();
+			
+        }
+		
+		function paintItemIcons(levelTypeSelect) {
+		
+			iconItems.forEach(function(ico){
+				ico.tint = getColor(COLORS, levelTypes[levelTypeSelect].menu ? 
+					levelTypes[levelTypeSelect].menu : ARTIFACTS_COLORS[ico.artifact]);
+			});
+
+			compassItem.tint = getColor(COLORS, levelTypes[levelTypeSelect].menu ? levelTypes[levelTypeSelect].menu : COLORS.WHITE);
+		
+		}
+		
+		function paintSkillIcons(levelTypeSelect) {
+		
+			iconSkills.forEach(function(ico){
+				if (storedAvailableSkillsForCurrentTrading[ico.skill]) {
+					ico.tint = getColor(COLORS, levelTypes[levelTypeSelect].menu ? 
+						levelTypes[levelTypeSelect].menu : SKILLS_COLORS[ico.skill]);				
+				} else {
+					ico.tint = BLACK_COLOR;
+				}
+			});
+
+			compassItem.tint = getColor(COLORS, levelTypes[levelTypeSelect].menu ? levelTypes[levelTypeSelect].menu : COLORS.WHITE);
+		
+		}
+		
+		function capitalizeFirstLetter(string) {
+			return string.charAt(0).toUpperCase() + string.slice(1);
+		}
+		
+		function initIcons() {
+
+			button = game.add.sprite(game.camera.x, game.camera.y+itemPanelY, 'button');			
+			button.animations.add('button', [0], 1, false);
+			button.animations.play('button');
+			game.physics.arcade.enable(button);
+			button.body.immovable = true;
+			buttons.push(button);
+			
+            fistItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			fistItem.animations.add('fist', [0], 1, false);
+			fistItem.animations.play('fist');
+            game.physics.arcade.enable(fistItem);
+            fistItem.body.immovable = true;
+			fistItem.artifact = ARTIFACTS.FIST;
+			iconItems.push(fistItem);
+			
+            swordItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			swordItem.animations.add('sword', [1], 1, false);
+			swordItem.animations.play('sword');			
+            game.physics.arcade.enable(swordItem);
+            swordItem.body.immovable = true;
+			swordItem.artifact = ARTIFACTS.SWORD;
+			iconItems.push(swordItem);
+			iconItems.push(addNoItem(ARTIFACTS.SWORD));
+			
+            fireItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			fireItem.animations.add('fire', [2], 1, false);
+			fireItem.animations.play('fire');			
+            game.physics.arcade.enable(fireItem);
+            fireItem.body.immovable = true;
+			fireItem.artifact = ARTIFACTS.FIRE;
+			iconItems.push(fireItem);
+			iconItems.push(addNoItem(ARTIFACTS.FIRE));
+
+            frostItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			frostItem.animations.add('frost', [3], 1, false);
+			frostItem.animations.play('frost');			
+            game.physics.arcade.enable(frostItem);
+            frostItem.body.immovable = true;
+			frostItem.artifact = ARTIFACTS.FROST;
+			iconItems.push(frostItem);
+			iconItems.push(addNoItem(ARTIFACTS.FROST));
+			
+            thunderItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			thunderItem.animations.add('thunder', [4], 1, false);
+			thunderItem.animations.play('thunder');			
+            game.physics.arcade.enable(thunderItem);
+            thunderItem.body.immovable = true;
+			thunderItem.artifact = ARTIFACTS.THUNDER;
+			iconItems.push(thunderItem);
+			iconItems.push(addNoItem(ARTIFACTS.THUNDER));
+			
+            madnessItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			madnessItem.animations.add('madness', [5], 1, false);
+			madnessItem.animations.play('madness');			
+            game.physics.arcade.enable(madnessItem);
+            madnessItem.body.immovable = true;
+			madnessItem.artifact = ARTIFACTS.MADNESS;
+			iconItems.push(madnessItem);
+			iconItems.push(addNoItem(ARTIFACTS.MADNESS));
+			
+            mimicItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			mimicItem.animations.add('mimic', [6], 1, false);
+			mimicItem.animations.play('mimic');			
+            game.physics.arcade.enable(mimicItem);
+            mimicItem.body.immovable = true;
+			mimicItem.artifact = ARTIFACTS.MIMIC;
+			iconItems.push(mimicItem);
+			iconItems.push(addNoItem(ARTIFACTS.MIMIC));
+
+            vampireItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			vampireItem.animations.add('vampire', [7], 1, false);
+			vampireItem.animations.play('vampire');			
+            game.physics.arcade.enable(vampireItem);
+            vampireItem.body.immovable = true;
+			vampireItem.artifact = ARTIFACTS.VAMPIRE;
+			iconItems.push(vampireItem);
+			iconItems.push(addNoItem(ARTIFACTS.VAMPIRE));
+
+            telekinesisItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			telekinesisItem.animations.add('telekinesis', [8], 1, false);
+			telekinesisItem.animations.play('telekinesis');			
+            game.physics.arcade.enable(telekinesisItem);
+            telekinesisItem.body.immovable = true;
+			telekinesisItem.artifact = ARTIFACTS.TELE;
+			iconItems.push(telekinesisItem);
+			iconItems.push(addNoItem(ARTIFACTS.TELE));
+			
+            immortalItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			immortalItem.animations.add('immortal', [9], 1, false);
+			immortalItem.animations.play('immortal');			
+            game.physics.arcade.enable(immortalItem);
+            immortalItem.body.immovable = true;
+			immortalItem.artifact = ARTIFACTS.IMMORTAL;
+			iconItems.push(immortalItem);
+			iconItems.push(addNoItem(ARTIFACTS.IMMORTAL));
+
+            compassItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			compassItem.animations.add('compass', [10], 1, false);
+			compassItem.animations.play('compass');			
+            game.physics.arcade.enable(compassItem);
+            compassItem.body.immovable = true;
+			buttons.push(compassItem);
+			
+			iconItems.forEach(function(ico){
+				ico.x = -100;
+				ico.y = -100;
+				if (ico.noItem) {
+					ico.visible = true;
+				} else {
+					ico.visible = false;
+				}
+			});
+			
+			//skills
+			
+            speedSkillItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			speedSkillItem.animations.add('speed', [13], 1, false);
+			speedSkillItem.animations.play('speed');			
+            game.physics.arcade.enable(speedSkillItem);
+            speedSkillItem.body.immovable = true;
+			speedSkillItem.skill = SKILLS.SPEED;
+			iconSkills.push(speedSkillItem);
+			
+            powerSkillItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			powerSkillItem.animations.add('power', [14], 1, false);
+			powerSkillItem.animations.play('power');			
+            game.physics.arcade.enable(powerSkillItem);
+            powerSkillItem.body.immovable = true;
+			powerSkillItem.skill = SKILLS.POWER;
+			iconSkills.push(powerSkillItem);
+			
+            healthSkillItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			healthSkillItem.animations.add('health', [12], 1, false);
+			healthSkillItem.animations.play('health');			
+            game.physics.arcade.enable(healthSkillItem);
+            healthSkillItem.body.immovable = true;
+			healthSkillItem.skill = SKILLS.HEALTH;
+			iconSkills.push(healthSkillItem);
+			
+            intellectSkillItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');			
+			intellectSkillItem.animations.add('intellect', [15], 1, false);
+			intellectSkillItem.animations.play('intellect');			
+            game.physics.arcade.enable(intellectSkillItem);
+            intellectSkillItem.body.immovable = true;
+			intellectSkillItem.skill = SKILLS.INTELLECT;
+			iconSkills.push(intellectSkillItem);
+			
+			iconSkills.forEach(function(ico){
+				ico.x = -100;
+				ico.y = -100;
+				ico.visible = false;
+			});
+			
+		}
+		
+		function initSkillInfoText() {
+			initSkillText(SKILLS.SPEED);
+			initSkillText(SKILLS.POWER);
+			initSkillText(SKILLS.HEALTH);
+			initSkillText(SKILLS.INTELLECT);
+			
+			function initSkillText(skill) {
+				skillInfoText[skill] = game.add.text(0, -100, skill.toLowerCase() + " " + currentPlayerSkillLevels[skill] + "/5 [" + playerSkillLevelsCost[skill][currentPlayerSkillLevels[skill]] + "]", { fontSize: fontSizeStr, fill: '#FFF' });			
+				skillInfoText[skill].stroke = 'black';
+				skillInfoText[skill].strokeThickness = 5;
+			}
+		}
+		
+		function addNoItem(artifact) {
+            var noItem = game.add.sprite(game.camera.x, game.camera.y, 'icons');
+			noItem.noItem = true;
+			noItem.animations.add('noItem', [11], 1, false);
+			noItem.animations.play('noItem');			
+            game.physics.arcade.enable(noItem);
+            noItem.body.immovable = true;
+			noItem.artifact = artifact;
+			return noItem;
+		}
+		
+		function getColorFromTint(tint) {
+			return '#' + tint.replace('0x', '')
+		}
+		
+		function popupMessage(value, obj, fSize) {
+		
+			var currX = obj.x;
+			var currY = obj.y;
+			var currentMessage = game.add.text(currX + 10, currY, value, { fontSize: fSize ? fSize : 20, fill: '#FFF' });
+			currentMessage.x = currentMessage.x - currentMessage.width/2;
+			
+			var popupColor = levelTypes[levelTypeSelect]['popup-color'] ? levelTypes[levelTypeSelect]['popup-color'] : COLORS.RAN;
+			
+			var messageInterval = setInterval(function() {
+				currY = currY - 5;
+				currentMessage.y = currY;				
+				currentMessage.tint = getColor(COLORS, popupColor);
+			}, 100);
+			setTimeout(function() {
+				clearInterval(messageInterval);
+				currentMessage.kill();
+			}, 1000)
+		}
+		
+		function showReplicMessage(value, obj) {
+		
+			if (obj.spelling) {
+				return;
+			}
+			obj.spelling = true;
+		
+			var currX = obj.x;
+			var currY = obj.y;
+			var currentMessage = game.add.text(currX, currY, value, { fontSize: 12, fill: '#FFF' });
+			currentMessage.x = currentMessage.x - currentMessage.width/2;
+			
+			var popupColor = levelTypes[levelTypeSelect]['popup-color'] ? levelTypes[levelTypeSelect]['popup-color'] : COLORS.RAN;
+			
+			var messageInterval = setInterval(function() {
+				currentMessage.tint = getColor(COLORS, popupColor);
+			}, 100);
+			setTimeout(function() {
+				clearInterval(messageInterval);
+				currentMessage.kill();
+				obj.spelling = false;
+			}, 1500);
+		}
+		
+		var storyTextJustShown = false;
+
+		function setReadTextTrue() {
+			pause = true;
+			showStoryText = true;
+            enemies.forEach(
+                function(en) {                
+                    en.body.velocity.x = 0;
+					en.body.velocity.y = 0;
+					en.animations.stop()
+                });	
+			player.body.velocity.x = 0;
+			player.body.velocity.y = 0;
+			player.animations.stop();
+			
+			storyTextJustShown = true;
+			setTimeout(function() {
+				storyTextJustShown = false;
+			}, 1500);
+		}
+		
+		function setReadTexFalse() {
+			storyText.visible = false;
+			pause = false;
+			showStoryText = false;
+		}
+		
+		function setItemsPauseTrue() {
+			if (isMap) {
+				return;
+			}
+			
+			itemsPause = true;
+			
+			buttons.forEach(function(but){
+				but.visible = false;
+			})
+			iconItems.forEach(function(ico){				
+				if (!ico.noItem) {
+					ico.visible = FOUND_ARTIFACTS[ico.artifact];
+				} else {
+					ico.visible = !FOUND_ARTIFACTS[ico.artifact];
+				}
+				
+			})
+            setPauseTrue();
+		}
+		
+		function setSkillsPauseTrue(merchant) {
+			if (isMap) {
+				return;
+			}
+			
+			skillsPause = true;
+			
+			buttons.forEach(function(but){
+				but.visible = false;
+			});
+			
+			storedAvailableSkillsForCurrentTrading = merchant.availableSkills;
+			
+			paintSkillIcons(levelTypeSelect);
+			iconSkills.forEach(function(ico){
+				ico.visible = true;
+				skillInfoText[ico.skill].visible = true;
+				skillInfoText[ico.skill].bringToTop();
+			});
+			setPauseTrue();
+		}
+		
+		function setPauseTrue() {
+			pause = true;
+            enemies.forEach(
+                function(en) {                
+                    en.body.velocity.x = 0;
+					en.body.velocity.y = 0;
+					en.animations.stop()
+                });	
+			player.body.velocity.x = 0;
+			player.body.velocity.y = 0;
+			player.animations.stop();
+		}
+		
+		function setPauseFalse() {
+		
+			itemsPause = false;
+			skillsPause = false;
+			inShop = false;
+			pause = false;
+			
+			if (isForOneTouch) {
+				button.visible = true;
+			}
+			iconItems.forEach(function(ico){
+				ico.visible = false;
+			})
+			iconSkills.forEach(function(ico){				
+				ico.visible = false;
+				skillInfoText[ico.skill].visible = false;
+			})
+		}		
+		
+		function correctIcons() {
+			if (player.y < screenHeigth/2) {
+				itemPanelY = screenHeigth - 48;
+			} else {
+				itemPanelY = 0;
+			}
+
+		}
+		
+		function refreshGameInfo() {
+			scoreText.x = game.camera.x + 16 + gameInfoHorizontalShift;
+			healthText.x = game.camera.x + 16 + gameInfoHorizontalShift;
+			enemyHealthText.x = game.camera.x + 16 + gameInfoHorizontalShift;
+
+			if (itemPanelY) {
+				gameInfoVerticalShift = -15;
+			}
+			
+			scoreText.y = game.camera.y + 16 + itemPanelY + gameInfoVerticalShift;
+			healthText.y = game.camera.y + 32 + itemPanelY + gameInfoVerticalShift;
+			enemyHealthText.y = game.camera.y + 48 + itemPanelY + gameInfoVerticalShift;
+			
+			scoreText.visible = isMap ? false : true;
+			healthText.visible = isMap ? false : true;
+			//enemyHealthText.visible = isMap ? false : true;
+		}
+		
+		function refreshButtons() {
+		
+			if (isForOneTouch) {
+				button.x = game.camera.x;
+				button.y = game.camera.y+itemPanelY;
+				button.visible = isMap ? false : true;
+			}
+			
+			compassItem.x = game.camera.x + (screenWidth-32);
+			compassItem.y = game.camera.y+itemPanelY;			
+			compassItem.visible = isMap ? false : hasCompass ? true : false;
+		
+			buttons.forEach(function(but){
+				but.bringToTop();				
+			})
+			
+		}
+		
+		function refreshIcons() {
+		
+			var h = screenHeigth/2
+			var w = screenWidth/3;
+
+			iconItems.forEach(function(ico){
+				var pos = ITEMS_POSITION_SHIFT[ico.artifact];
+				ico.x = game.camera.x + w + pos.x;
+				ico.y = game.camera.y+screenHeigth/3 + pos.y;
+				ico.bringToTop();
+			});
+
+		}
+		
+		function refreshSkillIcons() {
+			var h = screenHeigth/2
+			var w = screenWidth/3;
+
+			iconSkills.forEach(function(ico){
+				var pos = SKILLS_POSITION_SHIFT[ico.skill];
+				ico.x = game.camera.x + w + pos.x;
+				ico.y = game.camera.y+screenHeigth/3 + pos.y;
+				ico.bringToTop();
+				skillInfoText[ico.skill].x = ico.x + 40;
+				skillInfoText[ico.skill].y = ico.y + ico.height/3;
+				skillInfoText[ico.skill].tint = ico.tint;
+			});
+		}
+		
+		function refreshSkillInfoText() {
+			Object.keys(SKILLS).forEach((skill) => {
+				var cost = playerSkillLevelsCost[skill][currentPlayerSkillLevels[skill]] ? "[" + playerSkillLevelsCost[skill][currentPlayerSkillLevels[skill]] + "]" : "";
+				skillInfoText[skill].text = skill.toLowerCase() + " " + currentPlayerSkillLevels[skill] + "/5" + cost;
+			});
+		}
+		
+		function restoreGameScreen() {
+			if (isMap) {
+				game.scale.setGameSize(screenWidth, screenHeigth);
+				isMap = false;
+			}
+		}
+		
+		function showGameMap() {
+			isMap = true;			
+			game.scale.setGameSize(gameDimention * cellSize, gameDimention * cellSize);
+		}
+		
+		function showTitle() {			
+			title = game.add.sprite(0, 0, 'title');
+			title.loadTexture('title');
+			game.physics.arcade.enable(title);
+			title.body.immovable = true;
+			title.inputEnabled = true;
+			if (getRandomInt(0, 9) > 3) {
+				paintTitleInterval = setInterval(function() {
+					colorTitle();
+				}, 100);
+			}
+		}
+		
+		function hideTitle() {
+			if (title) {
+				title.visible = false;
+				title.kill();
+				title = null;
+			}
+		}
+		
+		function showScene(name) {
+			player.x = 0;
+			player.y = 0;
+			player.body.velocity.setTo(0, 0);
+			
+			scene = game.add.sprite(0, 0, scenes[name].decoration);
+			scene.loadTexture(scenes[name].decoration);
+			scene.x = 0;
+			scene.y = 0;
+			
+			if (scenes[name].objects) {
+				scene.subObjects = [];
+				scenes[name].objects.forEach((o, i) => {
+					if (o.animation) {
+						scene.subObjects.push(
+							game.add.sprite(
+								o.animation.beginPosition.x, 
+								o.animation.beginPosition.y, 
+								o.name							
+							)
+						);
+						scene.subObjects[i].animationInterval = setInterval(()=>{
+							if (o.animation.direction === 'up') {
+								scene.subObjects[i].y = scene.subObjects[i].y - o.animation.step;
+								if (scene.subObjects[i].y <= o.animation.endPosition.y) {
+									clearInterval(scene.subObjects[i].animationInterval)
+								}
+							}
+						}, o.animation.period);
+					} else if (o.staticPosition) {
+						scene.subObjects.push(
+							game.add.sprite(
+								o.staticPosition.x, 
+								o.staticPosition.y, 
+								o.name							
+							)
+						);
+					}
+					if (o.hideMills) {
+						o.hideMills.forEach(hm => {
+							setTimeout(()=> {
+								scene.subObjects[i].visible = false;
+							}, hm)
+						})
+					}
+					if (o.showMills) {
+						o.showMills.forEach(sm => {
+							setTimeout(()=> {
+								scene.subObjects[i].visible = true;
+							}, sm)
+						})
+					}
+				})
+			}
+			
+			colorScene();
+
+			if (scenes[name].messages) {
+			
+				scene.messages = [];
+				
+				scenes[name].messages.forEach((m, i) => {
+					scene.messages.push(
+						game.add.text(m.x, m.y, m.text, { fontSize: 12, fill: '#FFF' })
+					);
+					scene.messages[i].stroke = 'black';
+					scene.messages[i].strokeThickness = 9;
+					scene.messages[i].visible = false;
+					
+					setTimeout(() => {
+						scene.messages[i].visible = true;
+					}, m.beginMills);
+					
+					setTimeout(() => {
+						scene.messages[i].visible = false;
+					}, m.endMills);
+					
+				});
+				
+				setTimeout(function() {
+					scene.messages.forEach((m, i) => {
+						m.kill();
+					})
+				}, scenes[name].duration);
+				
+			}
+			
+			game.scale.setGameSize(250, 250);
+		}
+		
+		function hideScene() {
+			scene.visible = false;
+			scene.subObjects.forEach((so) => {
+				clearInterval(so.animationInterval);
+				so.visible = false;
+				so.kill();
+				so = null;
+			})
+			scene.kill();
+			scene = null;
+		}
+		
+		function showFinale() {
+			finale = game.add.sprite(0, 0, 'finale');
+			finale.loadTexture('finale');
+			finale.x = 0;
+			finale.y = 0;
+			game.scale.setGameSize(308, 483);
+			end = true;
+			player.kill();
+		}
+		
+		function showLoading() {
+			player.x = 0;
+			player.y = 0;
+			player.body.velocity.setTo(0, 0);
+			
+			loading = game.add.sprite(0, 0, 'loading');
+			loading.loadTexture('loading');
+			loading.x = 0;
+			loading.y = 0;
+			
+			colorLoading();
+			
+			game.scale.setGameSize(250, 250);
+		}
+		
+		function hideLoading() {
+			loading.visible = false;
+			loading.kill();
+			loading = null;
+		}
+		
+		function colorTitle() {
+			var ran = getRandomInt(0, 9);
+			var colorKeys = Object.keys(COLORS);
+			title.tint = COLORS[colorKeys[ran]];
+		}
+		
+		function colorLoading() {
+			var ran = getRandomInt(0, 9);
+			var colorKeys = Object.keys(COLORS);
+			loading.tint = COLORS[colorKeys[ran]];
+		}
+		
+		function colorScene() {
+			var ran = getRandomInt(0, 9);
+			var colorKeys = Object.keys(COLORS);
+			scene.tint = COLORS[colorKeys[ran]];
+			
+			scene.subObjects.forEach((so) => {
+				var ran = getRandomInt(0, 9);
+				so.tint = COLORS[colorKeys[ran]];;
+			})
+		}
+
+		function titleClickListener() {
+			startNewGame();
+		}
+		
+		function storyClickListener() {
+			if (!storyTextJustShown) {
+				setPauseFalse();
+				setReadTexFalse();
+			}
+		}
+		
+		function startNewGame() {
+			clearInterval(paintTitleInterval);
+			hideTitle();
+			gameStarted = true;
+			showScene('scene-1');
+			setTimeout(() => {
+				needToShowScene = true;
+				hideScene();
+				buildLevel(true);
+			}, scenes['scene-1'].duration);
+		}
+		
+        function update() {
+		
+			if (end) {
+				return;
+			}
+		
+			if (!gameStarted) {
+				if (isForOneTouch) {
+					title.events.onInputDown.add(titleClickListener, this);
+					return;
+				} else {
+					if (space.isDown) {
+						startNewGame();
+					}
+					return;
+				}
+			}
+			
+			if (scene) {
+				return;
+			}
+
+            game.physics.arcade.collide(player, platforms);
+            
+            game.physics.arcade.collide(enemies, platforms, hitWall);
+            //game.physics.arcade.collide(enemies, enemies, clashEnemies);
+			//game.physics.arcade.collide(player, enemies);
+
+            game.physics.arcade.overlap(player, transistors, collectTransistor, null, this);
+            game.physics.arcade.overlap(player, micros, collectMicro, null, this);
+            game.physics.arcade.overlap(player, cpus, collectCpu, null, this);
+			game.physics.arcade.overlap(player, megas, collectMega, null, this);
+			game.physics.arcade.overlap(player, lifes, collectLife, null, this);
+			game.physics.arcade.overlap(player, superLifes, collectSuperLife, null, this);
+            game.physics.arcade.overlap(player, keys, collectKey, null, this);
+			game.physics.arcade.overlap(player, compasses, collectCompass, null, this);
+			
+			game.physics.arcade.overlap(player, mainFiles, collectMainFile, null, this);
+			
+			game.physics.arcade.overlap(player, files, collectFile, null, this);
+			
+			game.physics.arcade.overlap(player, artifacts, collectArtifact, null, this);
+			
+			game.physics.arcade.overlap(enemies, enemies, overlapCharacters);
+			game.physics.arcade.overlap(enemies, items, overlapCharacters);
+			game.physics.arcade.overlap(player, enemies, overlapCharacters);
+
+			if (isForOneTouch) {
+				gameInfoHorizontalShift = 20;
+				touch();
+			} else {
+				button.visible = false;
+				keysBoard();
+			}
+			
+			game.physics.arcade.overlap(player, exit, nextLevel);
+
+			if (!pause) {
+				
+				canUpdate && moveEnemies();
+				//sortDrawingSprites();
+				synchronizeMagic();
+				canUpdate && correctIcons();
+				canUpdate && processPlayerState();
+			}            
+			
+			if (itemsPause && !showStoryText) {
+				refreshIcons();
+				
+				iconItems.forEach(function(ico){
+					if (!isForOneTouch && ico.artifact == selectedItem) {
+						ico.tint = getColor(COLORS, COLORS.RAN);
+					}
+				});
+				
+				if (!keyIsJustPressed) {
+				
+					keyIsJustPressed = true;
+					setTimeout(function() {
+						keyIsJustPressed = false;
+					}, 100)
+				
+					var res = inventorySelect(cursors, itemMatrix, currentItemCursorPosition);
+					if (res.selectedItem) {
+						currentItemCursorPosition = res.currentPosition;
+						if (res.selectedItem != selectedItem) {
+							selectedItem = res.selectedItem;
+							paintItemIcons(levelTypeSelect);
+						}
+					}
+				}
+			} else if (skillsPause && !showStoryText) {
+			//milo
+				refreshSkillIcons();
+				
+				iconSkills.forEach(function(ico){
+					if (!isForOneTouch && ico.skill == selectedSkill) {
+						ico.tint = getColor(COLORS, COLORS.RAN);
+					}
+				});
+				
+				if (!keyIsJustPressed) {
+				
+					keyIsJustPressed = true;
+					setTimeout(function() {
+						keyIsJustPressed = false;
+					}, 100)
+				
+					var res = inventorySelect(cursors, skillMatrix, currentSkillCursorPosition);
+					if (res.selectedItem) {
+						currentSkillCursorPosition = res.currentPosition;
+						if (res.selectedItem != selectedSkill) {
+							selectedSkill = res.selectedItem;
+							paintSkillIcons(levelTypeSelect);
+						}
+						if (res.action && canBuyAction) {
+							buySkill(res.selectedItem);
+						}
+					}
+				}
+			} else {
+				if (i.isDown) {
+					if (FOUND_ARTIFACTS[selectedItem]) {
+						switchSelectedItem(selectedItem);						
+					} else {
+						resetSelectedItem();
+					}
+					paintItemIcons(levelTypeSelect);
+				}
+				refreshGameInfo();
+				refreshButtons();
+			}
+			
+			if (showStoryText) {
+				storyText.bringToTop();
+			}
+        }
+		
+		function paintMainFile() {
+			if (mainFiles && mainFiles.hash[0]) {
+				paintMainFileInterval = setInterval(function() {
+					var colorKeys = Object.keys(COLORS);
+					var ran = getRandomInt(0, colorKeys.length-1);
+					mainFiles.hash[0].tint = COLORS[colorKeys[ran]];
+				}, 100);
+			}
+		}
+		
+		function processPlayerState() {
+			if (player.fired) {			
+				var ran = getRandomInt(0, 2);
+				var colorKeys = Object.keys(COLORS);
+				player.tint = COLORS[colorKeys[ran]];				
+			}
+		}
+		
+		function clicked() {
+			isClicked = true;							
+			isClickedTimeout = setTimeout(()=>{
+				isClicked = false;
+			}, 500);		
+		}
+
+		function touch() {
+		
+            if (player.stunned || player.dead || loading || scene) {
+                return;
+            }
+			
+			if (isTouched) {
+			
+				if (isMap && !isClicked) {
+					restoreGameScreen();
+					clicked();
+					return;
+				}
+			
+				if (Phaser.Rectangle.contains(button.body, game.input.worldX, game.input.worldY) && !pause && button.visible) {
+					if (!isClicked) {
+						clicked();
+						setItemsPauseTrue();
+					}
+					return;
+				}
+			
+				if (Phaser.Rectangle.contains(fistItem.body, game.input.worldX, game.input.worldY) && itemsPause) {
+					if (!isClicked) {
+						clicked();
+						setDefaultMode();
+						setPauseFalse();
+					}
+					return;
+				} if (Phaser.Rectangle.contains(swordItem.body, game.input.worldX, game.input.worldY) && itemsPause) {
+					if (!isClicked) {
+						clicked();
+						setSwordMode();	
+						setPauseFalse();
+					}					
+					return;
+				} else if (Phaser.Rectangle.contains(fireItem.body, game.input.worldX, game.input.worldY) && itemsPause) {
+					if (!isClicked) {				
+						clicked();
+						setFireMode();
+						setPauseFalse();
+					}
+					return;
+				} else if (Phaser.Rectangle.contains(frostItem.body, game.input.worldX, game.input.worldY) && itemsPause) {
+					if (!isClicked) {				
+						clicked();
+						setFrostMode();
+						setPauseFalse();
+					}
+					return;
+				} else if (Phaser.Rectangle.contains(thunderItem.body, game.input.worldX, game.input.worldY) && itemsPause) {
+					if (!isClicked) {				
+						clicked();
+						setThunderMode();
+						setPauseFalse();
+					}
+					return;
+				} else if (Phaser.Rectangle.contains(madnessItem.body, game.input.worldX, game.input.worldY) && itemsPause) {
+					if (!isClicked) {				
+						clicked();
+						setMadnessMode();
+						setPauseFalse();
+					}
+					return;
+				} else if (Phaser.Rectangle.contains(mimicItem.body, game.input.worldX, game.input.worldY) && itemsPause) {		
+					if (!isClicked) {						
+						if (player.mode == PLAYER_MODES.MIMIC) {
+							return;
+						};
+						clicked();
+						if (score >= 30) {
+							useScore(30);						
+							setMimicMode();
+							setPauseFalse();
+						}
+					}
+					return;
+				} else if (Phaser.Rectangle.contains(vampireItem.body, game.input.worldX, game.input.worldY) && itemsPause) {
+					if (!isClicked) {										
+						if (player.mode == PLAYER_MODES.VAMPIRE) {
+							return;
+						};
+						clicked();
+						if (score >= 90) {
+							useScore(90);
+							setVampireMode();
+							setPauseFalse();
+						}
+					}
+					return;
+				} else if (Phaser.Rectangle.contains(telekinesisItem.body, game.input.worldX, game.input.worldY) && itemsPause) {
+					if (!isClicked) {				
+						if (player.mode == PLAYER_MODES.TELEKINESIS) {
+							return;
+						};
+						clicked();
+						if (score >= 50) {
+							useScore(50);
+							setTelekinesisMode();
+							setPauseFalse();
+						}
+					}
+					return;
+				} else if (Phaser.Rectangle.contains(immortalItem.body, game.input.worldX, game.input.worldY) && itemsPause) {
+					if (!isClicked) {				
+						if (player.mode == PLAYER_MODES.IMMORTAL) {
+							return;
+						};
+						clicked();
+						if (score >= 100) {
+							useScore(100);
+							setImmortalMode();
+							setPauseFalse();
+						}
+					}
+					return;
+				} else if (Phaser.Rectangle.contains(compassItem.body, game.input.worldX, game.input.worldY) && !pause) {
+					if (!isClicked) {
+						if (hasCompass) {
+							clicked();
+							showGameMap();
+							setPauseFalse();
+						}
+					}
+					return;
+				} else if (Phaser.Rectangle.contains(speedSkillItem.body, game.input.worldX, game.input.worldY) && canBuyAction && skillsPause && speedSkillItem.visible) {
+				//loony
+					if (!isClicked) {
+						clicked();
+						buySkill(SKILLS.SPEED);
+					}
+					return;
+				} else if (Phaser.Rectangle.contains(powerSkillItem.body, game.input.worldX, game.input.worldY) && canBuyAction && skillsPause && powerSkillItem.visible) {
+					if (!isClicked) {
+						clicked();
+						buySkill(SKILLS.POWER);
+					}
+					return;
+				} else if (Phaser.Rectangle.contains(healthSkillItem.body, game.input.worldX, game.input.worldY) && canBuyAction && skillsPause && healthSkillItem.visible) {
+					if (!isClicked) {
+						clicked();
+						buySkill(SKILLS.HEALTH);
+					}
+					return;
+				} else if (Phaser.Rectangle.contains(intellectSkillItem.body, game.input.worldX, game.input.worldY) && canBuyAction && skillsPause && intellectSkillItem.visible) {
+					if (!isClicked) {
+						clicked();
+						buySkill(SKILLS.INTELLECT);
+					}
+					return;
+				} else if (skillsPause && !isClicked && canBuyAction) {
+					clicked();
+					setPauseFalse();
+					return
+				}
+				
+				if (pause) {
+					return;
+				}
+
+				if (player.frozen) {
+					return;
+				}
+				
+				game.physics.arcade.moveToXY(player, game.input.worldX - 16, game.input.worldY - 24, playerStep);
+				
+				if (enemies.find((enemy)=>!enemy.dead && Phaser.Rectangle.contains(enemy.body, game.input.worldX, game.input.worldY))) {
+					if (!player.canAttack) {
+						punch();
+						if (playerLookRight) {
+							player.animations.play(ANIMATIONS.PUNCH_RIGHT);
+						} else {
+							player.animations.play(ANIMATIONS.PUNCH_LEFT);
+						}
+					}					
+				} else if (!Phaser.Rectangle.contains(player.body, game.input.worldX, game.input.worldY)) {
+					if (player.x < game.input.worldX) {
+						player.animations.play(ANIMATIONS.RIGHT);
+						playerLookRight = true;				
+					} else if (player.x > game.input.worldX) {	
+						player.animations.play(ANIMATIONS.LEFT);
+						playerLookRight = false;
+					}				
+				} else {
+					player.body.velocity.setTo(0, 0);
+					if (!player.canAttack) {			
+						punch();
+						if (playerLookRight) {
+							player.animations.play(ANIMATIONS.PUNCH_RIGHT);
+						} else {
+							player.animations.play(ANIMATIONS.PUNCH_LEFT);
+						}
+					}
+				}				
+				
+			} else {
+				player.animations.stop();
+				player.frame = 4;
+				player.body.velocity.setTo(0, 0);
+			}
+			
+		}
+		
+		function sortDrawingSprites() {
+			let spriteList = enemies.concat(items);
+			spriteList.push(player);			
+			spriteList.sort(function(sprite1, sprite2) {
+				return sprite1.getCenter().y >= sprite2.getCenter().y;
+			});
+            spriteList.forEach(
+                function(sprite) {                
+                    sprite.bringToTop();
+					if (sprite.isPlayer) {
+						magic.bringToTop();
+					}		
+                }
+			);
+		}
+		
+		function overlapCharacters(char1, char2) {
+			if (char1.getCenter().y < char2.getCenter().y) {
+				char2.bringToTop();
+				if (char2.isPlayer) {
+					magic.bringToTop();
+				}
+			} else {
+				char1.bringToTop();
+				if (char1.isPlayer) {
+					magic.bringToTop();
+				}				
+			}			
+		}
+		
+		function synchronizeMagic() {
+			magic.x = player.x;
+			magic.y = player.y;
+			magic.bringToTop();
+		}
+		
+		function fireCharacter(char, timeout) {
+			
+			if (char.frozen) {
+				unfreezeCharacter(char);
+			}
+			
+			if (char.fired) {
+				return;
+			}			
+			
+			char.fired = true;			
+			
+			char.firedInterval = setInterval(()=>{
+				processDamage(char, 5);
+				if (char.life < 0 && !char.dead) {
+					char.fired = false;
+					extinguishCharacter(char);
+					charDeath(char);
+				}
+			}, 1000);
+			char.firedTimeout = setTimeout(()=>{
+				extinguishCharacter(char);
+			}, timeout);
+		}
+		
+		function extinguishCharacter(char) {
+			char.fired = false;
+			char.tint = char.color;
+			clearInterval(char.firedInterval);
+			clearTimeout(char.firedTimeout);
+		}
+		
+		function lightCharacter(charFrom, charTo) {
+		
+			drawLightning(charFrom, charTo);
+			charTo.lighted = true;
+
+			processDamageFromCharacter(50, charTo);
+			clearInterval(charTo.lightedInterval);
+			charTo.lightedInterval = setInterval(()=>{
+				if (charTo.life < 0) {
+					charTo.lighted = false;
+					clearInterval(charTo.lightedInterval);
+					charDeath(charTo);
+				}
+			}, 1000);
+			
+			setTimeout(()=>{
+				charTo.lighted = false;
+				charTo.tint = charTo.color;
+				clearInterval(charTo.lightedInterval);
+			}, 3000);
+		}
+		
+		function freezeCharacter(char, timeout) {
+			if (char.frozen) {
+				return;
+			}
+			if (char.fired) {
+				extinguishCharacter(char);
+			}
+			char.frozen = true;
+			char.tint = char.color == COLORS.CYAN ? COLORS.WHITE : COLORS.CYAN;
+			char.freezeTimeout = setTimeout(()=>{
+				char.frozen = false;
+				char.tint = char.color;
+			}, timeout);
+		}
+		
+		function makeCharacterMad(char) {
+			char.mad = true;			
+			char.tint = COLORS.GREEN;
+			var madTimeout = setTimeout(()=>{
+				char.mad = false;
+				char.tint = char.color;
+			}, 10000 + playerIntellect);
+		}
+		
+		function biteCharacter(char) {
+			var newHealth = player.life + 5//playerAttack;
+			player.life = newHealth < maxPlayerLife ? newHealth : maxPlayerLife;
+			refreshHealthText();
+		}
+		
+		function unfreezeCharacter(char) {
+			char.frozen = false;
+			clearTimeout(char.freezeTimeout);
+		}
+
+		function cancelImmortal() {
+			clearInterval(player.immortalInterval);
+			clearTimeout(player.immortalTimeout);		
+			if (!player.frozen) {
+				player.tint = player.color;
+			}
+		}
+		
+		function cancelTelekinesis() {
+			clearInterval(player.telekinesisInterval);
+			clearTimeout(player.telekinesisTimeout);		
+		}		
+		
+		function cancelMimic() {
+			clearTimeout(player.mimicTimeout);		
+			player.loadTexture('robo', 0);
+		}		
+		
+		function cancelVampire() {
+			clearTimeout(player.vampireTimeout);		
+			player.loadTexture('robo', 0);		
+		}
+		
+		function refreshModeText() {
+			modeText.text = 'Mode is: ' + player.mode;
+		}
+
+		function refreshHealthText() {
+			healthText.text = '♥ ' + player.life;
+		}
+		
+		function setDefaultMode() {
+			player.mode = PLAYER_MODES.DEFAULT;
+			//refreshModeText();
+			cancelImmortal();
+			cancelTelekinesis();
+			cancelMimic();
+			cancelVampire();			
+			clearInterval(magic.interval);
+			magic.animations.play(ANIMATIONS.HIDE);
+		
+			resetSelectedItem();
+		}
+		
+		function setSwordMode() {
+			player.mode = PLAYER_MODES.SWORD;
+			//refreshModeText();
+			cancelImmortal();
+			cancelTelekinesis();
+			cancelMimic();
+			cancelVampire();
+			clearInterval(magic.interval);
+			magic.loadTexture('sword-magic', 0);
+			magic.tint = COLORS.BLUE;
+			magic.interval = setInterval(()=> {
+				var ran = getRandomInt(5, 8);
+				var colorKeys = Object.keys(COLORS);
+				magic.tint = COLORS[colorKeys[ran]];
+			}, 100)
+			magic.animations.play(ANIMATIONS.SHOW);			
+		}
+		
+		function setFireMode() {
+			player.mode = PLAYER_MODES.FIRE;
+			//refreshModeText();
+			cancelImmortal();
+			cancelTelekinesis();
+			cancelMimic();
+			cancelVampire();
+			clearInterval(magic.interval);
+			magic.loadTexture('fire-magic', 0);
+			magic.tint = COLORS.RED;
+			magic.interval = setInterval(()=> {
+				var ran = getRandomInt(0, 2);
+				var colorKeys = Object.keys(COLORS);
+				magic.tint = COLORS[colorKeys[ran]];
+			}, 100)
+			magic.animations.play(ANIMATIONS.SHOW);
+		}
+		
+		function setTelekinesisMode() {
+			player.mode = PLAYER_MODES.TELEKINESIS;
+			//refreshModeText();
+			cancelImmortal();
+			cancelMimic();
+			cancelVampire();
+			clearInterval(magic.interval);
+			magic.loadTexture('telekinesis-magic', 0);
+			magic.tint = COLORS.PURPLE;
+			magic.interval = setInterval(()=> {
+				var ran = getRandomInt(9, 12);
+				var colorKeys = Object.keys(COLORS);
+				magic.tint = COLORS[colorKeys[ran]];
+			}, 100)
+			magic.animations.play(ANIMATIONS.SHOW);
+			
+			player.telekinesisInterval = setInterval(()=>{
+				drawTelekinesisCircle(player.x, player.y);
+				items.forEach(function(item) {
+					if (checkTele(item)) {
+						game.physics.arcade.moveToXY(item, player.getCenter().x, player.getCenter().y, playerStep);
+					}
+				});
+			}, 100);
+
+			player.telekinesisTimeout = setTimeout(()=>{
+				clearInterval(player.telekinesisInterval);
+				setDefaultMode();
+			}, 10000 + playerIntellect);
+		}		
+		
+		function setImmortalMode(immortalTimeoutMills) {
+			player.mode = PLAYER_MODES.IMMORTAL;
+			//refreshModeText();
+			cancelMimic();
+			cancelTelekinesis();
+			cancelVampire();
+			clearInterval(magic.interval);
+			magic.animations.play(ANIMATIONS.HIDE);
+			
+			player.immortalInterval = setInterval(()=>{
+				var ran = getRandomInt(0, 9);
+				var colorKeys = Object.keys(COLORS);
+				if (!player.frozen) {
+					player.tint = COLORS[colorKeys[ran]];
+				}				
+			}, 100);
+
+			player.immortalTimeout = setTimeout(()=>{
+				//alert('There can be only one!')
+				clearInterval(player.immortalInterval);
+				player.tint = player.color;
+				setDefaultMode();
+			}, immortalTimeoutMills ? immortalTimeoutMills : 15000 + playerIntellect)			
+		}
+		
+		function setMadnessMode() {
+			player.mode = PLAYER_MODES.MADNESS;
+			//refreshModeText();
+			cancelImmortal();
+			cancelTelekinesis();
+			cancelMimic();
+			cancelVampire();
+			clearInterval(magic.interval);
+			magic.loadTexture('madness-magic', 0);
+			magic.tint = COLORS.GREEN;
+			magic.interval = setInterval(()=> {
+				var ran = getRandomInt(2, 4);
+				var colorKeys = Object.keys(COLORS);
+				magic.tint = COLORS[colorKeys[ran]];
+			}, 100)
+			magic.animations.play(ANIMATIONS.SHOW);
+		}		
+		
+		function setThunderMode() {
+			player.mode = PLAYER_MODES.THUNDER;
+			//refreshModeText();
+			cancelImmortal();
+			cancelTelekinesis();
+			cancelMimic();
+			cancelVampire();
+			clearInterval(magic.interval);
+			magic.loadTexture('thunder-magic', 0);
+			magic.tint = COLORS.CYAN;
+			magic.interval = setInterval(()=> {
+				var ran = getRandomInt(5, 6);
+				var colorKeys = Object.keys(COLORS);
+				magic.tint = COLORS[colorKeys[ran]];
+			}, 100)
+			magic.animations.play(ANIMATIONS.SHOW);
+			
+		}
+
+		function setFrostMode() {
+			player.mode = PLAYER_MODES.FROST;
+			//refreshModeText();
+			cancelImmortal();
+			cancelTelekinesis();
+			cancelMimic();
+			cancelVampire();
+			clearInterval(magic.interval);
+			magic.loadTexture('frost-magic', 0);
+			magic.tint = COLORS.WHITE;
+			magic.animations.play(ANIMATIONS.SHOW);
+		}
+		
+		function setMimicMode() {
+			player.mode = PLAYER_MODES.MIMIC;
+			//refreshModeText();
+			cancelImmortal();
+			cancelTelekinesis();
+			cancelVampire();
+			clearInterval(magic.interval);
+			magic.animations.play(ANIMATIONS.HIDE);
+			
+			player.loadTexture(getEnemyType(), 0);
+			
+			player.mimicTimeout = setTimeout(()=>{
+				player.loadTexture('robo', 0);
+				setDefaultMode();
+			}, 15000 + playerIntellect);				
+			
+		}
+		
+		function setVampireMode() {
+			player.mode = PLAYER_MODES.VAMPIRE;
+			//refreshModeText();
+			cancelImmortal();
+			cancelTelekinesis();
+			cancelMimic();
+			clearInterval(magic.interval);
+			magic.animations.play(ANIMATIONS.HIDE);
+			
+			player.loadTexture('robo-vampire', 0);
+			
+			player.vampireTimeout = setTimeout(()=>{
+				player.loadTexture('robo', 0);
+				setDefaultMode();
+			}, 10000 + playerIntellect);			
+		}
+		
+		function processMimicMode() {
+			if (player.mode == PLAYER_MODES.MIMIC) {
+				return;
+			}
+			
+			if (score >= 30) {
+				useScore(30);
+				setMimicMode();
+			} else {
+				setDefaultMode();
+			}
+		}
+
+		function processVampireMode() {
+			if (player.mode == PLAYER_MODES.VAMPIRE) {
+				return;
+			}
+			
+			if (score >= 90) {
+				useScore(90);
+				setVampireMode();					
+			} else {
+				setDefaultMode();
+			}
+		}
+
+		function processTeleMode() {
+			if (player.mode == PLAYER_MODES.TELEKINESIS) {
+				return;
+			}				
+			
+			if (score >= 50) {
+				useScore(50);
+				setTelekinesisMode();					
+			} else {
+				setDefaultMode();
+			}
+		}
+
+		function processImmortalMode() {
+			if (player.mode == PLAYER_MODES.IMMORTAL) {
+				return;
+			}
+			
+			if (score >= 100) {
+				useScore(100);
+				setImmortalMode();									
+			} else {
+				setDefaultMode();
+			}
+		}
+		
+		function checkOverlap(spriteA, spriteB) {
+
+			var boundsA = spriteA.getBounds();
+			var boundsB = spriteB.getBounds();
+
+			return Phaser.Rectangle.intersects(boundsA, boundsB);
+
+		}		
+		
+		function useScore(number) {
+			score = (score - number) < 0 ? 0 : (score - number);
+			refreshTick(0);
+		}
+
+        function punch() {
+
+			if (player.mode == PLAYER_MODES.SWORD) {
+				if (score >= 10) {
+					useScore(10);
+				} else {
+					setDefaultMode();
+				}
+			} else if (player.mode == PLAYER_MODES.FIRE) {
+				if (score >= 15) {
+					useScore(15);
+				} else {
+					setDefaultMode();
+				}
+			} else if (player.mode == PLAYER_MODES.THUNDER) {
+				if (score >= 60) {
+					useScore(60);
+				} else {
+					setDefaultMode();
+				}
+			} else if (player.mode == PLAYER_MODES.FROST) {
+				if (score >= 25) {
+					useScore(25);
+				} else {
+					setDefaultMode();
+				}				
+			} else if (player.mode == PLAYER_MODES.MADNESS) {
+				if (score >= 110) {
+					useScore(110);
+				} else {
+					setDefaultMode();
+				}				
+			}
+			
+			var thunderChain = [];
+
+			if (player.mode == PLAYER_MODES.SWORD) {
+				drawSwordCircle(player.x, player.y)
+			}
+			
+			if (player.mode == PLAYER_MODES.FIRE) {
+				drawFireCircle(player.x, player.y)
+			}
+
+			if (player.mode == PLAYER_MODES.FROST) {
+				drawIceCircle(player)
+			}
+			
+			if (player.mode == PLAYER_MODES.MADNESS) {
+				drawMadCircle(player.x, player.y)
+			}			
+		
+            enemies.forEach(function (enemy) {
+			
+                if (enemy.dead || enemy.rageFired) {
+                    return;
+                }
+
+                if (checkPunch(enemy)) {
+				
+					if (enemy.immunity && enemy.immunity.indexOf(player.mode) != -1) {
+						return;
+					}
+
+					if (!inShop && enemy.skill && enemy.skill.indexOf(ENEMY_SKILLS.TRADE) != -1) {
+						popupMessage("SKILLS!!!", enemy);
+						inShop = true;
+						clearTimeout(buySkillTimeout);
+						canBuyAction = false;
+						buySkillTimeout = setTimeout(()=>{
+							canBuyAction = true;
+						}, 1000);
+						setSkillsPauseTrue(enemy);
+						return;
+					}
+					
+					if (enemy.skill && enemy.skill.indexOf(ENEMY_SKILLS.ALLY) != -1) {
+						return;
+					}
+					                    
+                    enemy.stunned = true;
+					//enemy.life = enemy.life - (player.mode == PLAYER_MODES.SWORD ? 5 + playerAttack : playerAttack);
+					var currentPlayerAttack = player.mode == PLAYER_MODES.SWORD ? 5 + playerAttack : playerAttack; 
+					if (player.mode == PLAYER_MODES.FROST || player.mode == PLAYER_MODES.MADNESS) {
+						currentPlayerAttack = 5;
+					}
+					processDamage(enemy, currentPlayerAttack);
+					//processDamageFromCharacter(player.mode == PLAYER_MODES.SWORD ? 5 + playerAttack : playerAttack, enemy);
+					enemy.hitCnt = enemy.hitCnt ? enemy.hitCnt + 1 : 1;
+					
+					function getHitLimit() {
+						if (chapter < 2) {
+							return 3;
+						}
+						if (chapter < 4) {
+							return 2;
+						}
+						return 1;
+					}
+					
+					if (!enemy.hitTimeout) {
+						enemy.hitTimeout = setTimeout(function() {
+							var hitLimit = getHitLimit();
+							if (enemy.hitCnt > hitLimit) {
+								enemy.tryToRage = true;
+							};
+							delete enemy.hitCnt;
+							delete enemy.hitTimeout;
+						}, 2000);
+						setTimeout(function() {
+							enemy.tryToRage = false;
+						}, 2500);						
+					}
+					
+					//rage!
+					if (player.mode != PLAYER_MODES.VAMPIRE && enemy.tryToRage) {
+						delete enemy.tryToRage;
+						var rageChance = getRandomInt(0, 100);
+						if (enemy.rageChance && rageChance <= enemy.rageChance) {
+						
+							var rageTime = enemy.rageTime ? enemy.rageTime : 2000;
+						
+							enemy.stunned = false;
+							enemy.rageFired = true;
+							enemy.rageBorn = true;
+							enemy.animations.play(ANIMATIONS.DAMAGE);
+							
+							enemy.immortalInterval = setInterval(()=>{
+								var ran = getRandomInt(0, 9);
+								var colorKeys = Object.keys(COLORS);
+								enemy.tint = COLORS[colorKeys[ran]];
+							}, 100);
+							
+							setTimeout(function() {
+								enemy.rageBorn = false;
+							}, 1000);
+							setTimeout(function() {
+								enemy.rageFired = false;
+								clearInterval(enemy.immortalInterval);
+								enemy.tint = enemy.color;
+							}, rageTime);
+							popupMessage("D.D.o.S.", enemy);
+							return;
+						}	
+					}
+					
+					hit(player, enemy);
+					
+                    enemy.animations.stop();
+				
+					if (player.mode == PLAYER_MODES.FIRE) {
+						fireCharacter(enemy, 5000 + playerIntellect);
+					}
+					
+					if (player.mode == PLAYER_MODES.FROST) {
+						if (!enemy.frozen) {							
+							freezeCharacter(enemy, 5000 + playerIntellect);
+						}						
+					}					
+					
+					if (player.mode == PLAYER_MODES.THUNDER) {
+						thunderChain.push(enemy);						
+					}
+					
+					if (player.mode == PLAYER_MODES.MADNESS) {
+						if (!enemy.mad) {
+							makeCharacterMad(enemy);
+						}						
+					}					
+					
+					if (player.mode == PLAYER_MODES.VAMPIRE) {
+						biteCharacter(enemy);
+					}					
+
+                    //enemyHealthText.text = "Enemy " + enemy.type + " " + enemy.idKey + " life: " + enemy.life;
+					enemyHealthText.text = capitalizeFirstLetter(enemy.type) + " ♥ " + enemy.life;
+                    enemyHealthText.visible = true;
+                    setTimeout(()=>{
+                            enemyHealthText.visible = false;
+                    }, 3000);	
+
+                    if (enemy.life > 0) {
+						enemy.animations.play(ANIMATIONS.DAMAGE);
+						setTimeout(()=>{
+								enemy.stunned = false;
+						}, 500)
+                    } else {
+						charDeath(enemy);
+                    }
+                }
+            })
+			
+			if (player.mode == PLAYER_MODES.THUNDER) {			
+				processThunderBolt(thunderChain);
+			}			
+			
+			player.canAttack = true;
+			setTimeout(()=>{
+				player.canAttack = false;
+			}, playerAttackCooldown);
+        }
+		
+		function processDamage(target, damage) {
+			target.life = target.life - damage;
+			popupMessage("-" + damage, target, 12);
+		}
+		
+		function processThunderBolt(thunderChain) {
+			if (thunderChain.length) {									
+				lightCharacter(player, thunderChain[0]);
+				for (var i = 0; i < thunderChain.length; i++) {
+					if (thunderChain[i+1]) {
+						lightCharacter(thunderChain[i], thunderChain[i+1]);
+					}
+				}
+			} else {
+				popupMessage("No target", player);
+			}
+		}
+		
+		function clearCharTimeoutsAndIntervals(char) {
+			clearTimeout(char.freezeTimeout);
+			clearTimeout(char.madTimeout);
+			clearInterval(char.lightedInterval);
+			clearInterval(char.firedInterval);
+			clearTimeout(char.firedTimeout);
+		}
+
+        function charScanTarget(char, target) {
+				
+			if (target.dead || (target.mode == PLAYER_MODES.MIMIC && !target.found && char.skill != ENEMY_SKILLS.HUNT) 
+				|| (char.skill && char.skill.indexOf(ENEMY_SKILLS.TRADE) != -1)) {
+				char.hunting = false;
+				return;
+			}
+
+            var scanRarius = char.scan;
+
+            var dx = target.getCenter().x - char.getCenter().x;
+            var dy = target.getCenter().y - char.getCenter().y;
+
+            var scanResult = !(scanRarius * scanRarius <= dx * dx + dy * dy);
+            if (scanResult) {
+                char.hunting = true;
+            } else {
+                char.hunting = false;
+            }
+			return scanResult;
+        }
+        
+        function canEnemyHitTarget(enemy, target) {
+		
+			if (target.dead || (enemy.skill && enemy.skill.indexOf(ENEMY_SKILLS.TRADE) != -1)) {
+				return false;
+			}
+            var radius = enemy.attackRadius ? enemy.attackRadius : enemyAtackRadius;
+
+            var dx = target.getCenter().x - enemy.getCenter().x;
+            var dy = target.getCenter().y - enemy.getCenter().y;
+			
+			var res = !(radius * radius <= dx * dx + dy * dy);
+						
+            return res;
+        }
+		
+        function canEnemyCastThunder(enemy, target) {
+
+			if (target.dead || (enemy.skill && enemy.skill.indexOf(ENEMY_SKILLS.TRADE) != -1) 
+				|| target.mode == PLAYER_MODES.MIMIC) {
+				return false;
+			}
+			
+            var radius = enemy.castRadius ? enemy.castRadius : 0;
+
+            var dx = target.getCenter().x - enemy.getCenter().x;
+            var dy = target.getCenter().y - enemy.getCenter().y;
+			
+			var res = !(radius * radius <= dx * dx + dy * dy);
+            return res;
+        }
+		
+		function canEnemyBurnsEnemy(enemy, member) {
+			if (member.dead || enemy.dead) {
+				return false;
+			}
+            var radius = 50;
+
+            var dx = member.x - enemy.x;
+            var dy = member.y - enemy.y;
+
+            return !(radius * radius <= dx * dx + dy * dy);			
+		}
+		
+		function enemyBurnsEmenies(enemy) {
+            enemies.forEach(
+                function(member) {
+					if (!member.fired && canEnemyBurnsEnemy(enemy, member)) {
+						enemyBurnsEnemy(enemy, member);
+					}
+                });			
+		}
+		
+		function enemyBurnsEnemy(enemy, member) {
+			fireCharacter(member, 5000);
+		};
+
+        function drawSwordCircle(x, y) {
+            var graphics = game.add.graphics(0, 0);
+
+			var ran = getRandomInt(5, 8);
+			var colorKeys = Object.keys(COLORS);
+			var color = COLORS[colorKeys[ran]];			
+			
+            graphics.lineStyle(1, color, 1);
+			
+			var attackRaius = getPlayerAttackRadius();
+			
+			graphics.drawCircle(x + 16, y + 24, attackRaius);
+			
+			setTimeout(()=>{
+				graphics.kill();
+			}, 100)
+            
+        }
+		
+		function getRandomStrikeMessage() {
+			var ran = getRandomInt(0, 16);
+			switch(ran) {
+				case 0: return 'HIT';
+				case 1: return 'SMASH';
+				case 2: return 'BANG';
+				case 3: return 'CRASH';
+				case 4: return 'BOOM';
+				case 5: return 'POW';
+				case 6: return 'WOW';
+				case 7: return 'ZAP';
+				case 8: return 'OOOPS';
+				case 9: return 'SPLASH';
+				case 10: return 'CRACK';
+				case 11: return 'KABOOM';
+				case 12: return 'AARGH';
+				case 13: return 'SMACK';
+				case 14: return 'POOF';
+				case 15: return 'GULP';
+				case 16: return 'BOING';
+				default: return 'RIP'
+			}
+		}
+        
+        function drawFireCircle(x, y, char) {
+            var graphics = game.add.graphics(0, 0);
+
+			var ran = getRandomInt(0, 2);
+			var colorKeys = Object.keys(COLORS);
+			var color = COLORS[colorKeys[ran]];			
+			
+            graphics.lineStyle(1, color, 1);
+			
+			var attackRaius = char ? (char.attackRadius ? char.attackRadius : enemyAtackRadius) : getPlayerAttackRadius();
+			
+			graphics.drawCircle(x + 16, y + 24, attackRaius);
+			setTimeout(()=>{
+				graphics.kill();
+			}, 100)
+            
+        }
+		
+        function drawTelekinesisCircle(x, y) {
+            var graphics = game.add.graphics(0, 0);
+
+			var ran = getRandomInt(9, 12);
+			var colorKeys = Object.keys(COLORS);
+			var color = COLORS[colorKeys[ran]];			
+			
+            graphics.lineStyle(1, color, 1);
+			
+			var radius = playerAttackRadius * teleRadiusMultiple;
+			
+			graphics.drawCircle(x + 16, y + 24, radius);
+			setTimeout(()=>{
+				graphics.kill();
+			}, 100)
+            
+        }		
+		
+        function drawMadCircle(x, y) {
+            var graphics = game.add.graphics(0, 0);
+
+			var ran = getRandomInt(2, 4);
+			var colorKeys = Object.keys(COLORS);
+			var color = COLORS[colorKeys[ran]];			
+			
+            graphics.lineStyle(1, color, 1);
+			
+			var attackRaius = getPlayerAttackRadius();
+			
+			graphics.drawCircle(x + 16, y + 24, attackRaius);
+			setTimeout(()=>{
+				graphics.kill();
+			}, 100)
+            
+        }		
+		
+        function drawIceCircle(char) {
+            var graphics = game.add.graphics(0, 0);
+
+            graphics.lineStyle(1, COLORS.CYAN, 1);
+			
+			var attackRaius = !char.isPlayer ? (char.attackRadius ? char.attackRadius : enemyAtackRadius) : getPlayerAttackRadius();
+			
+			graphics.drawCircle(char.x + 16, char.y + 24, attackRaius);
+			setTimeout(()=>{
+				graphics.kill();
+			}, 100)
+            
+        }
+		
+        function drawForceSphere(char, target, color) {
+            var graphics = game.add.graphics(0, 0);
+
+            graphics.lineStyle(1.5, color, 1);
+			
+			var attackRaius = !char.isPlayer ? (char.attackRadius ? char.attackRadius : enemyAtackRadius) : getPlayerAttackRadius();
+			
+			graphics.drawCircle(char.x + 16, char.y + 24, attackRaius*2);
+			graphics.moveTo(char.x, char.y);
+			graphics.lineTo(target.x, target.y);
+			
+			setTimeout(()=>{
+				graphics.kill();
+			}, 100)
+            
+        }		
+		
+		function drawLightning(from, to) {
+            var graphics = game.add.graphics(0, 0);
+
+            graphics.lineStyle(2, COLORS.CYAN, 1);
+			
+			graphics.moveTo(from.x, from.y);
+			graphics.lineTo(to.x, to.y);			
+			
+            setTimeout(()=>{
+                graphics.kill();
+            }, 100);
+		}
+        
+		function processThunderCast(char, target) {
+			if (!char.thunderCasted && !char.thunderCastedCooldown) {
+				char.thunderCasted = true;
+				char.thunderCastedCooldown = true;
+
+				setTimeout(()=>{
+					char.thunderCasted = false;
+					char.tint = char.color;
+					if (canEnemyCastThunder(char, target)) {
+						lightCharacter(char, target);
+						target.lightedInterval = setInterval(()=>{
+							var ran = getRandomInt(5, 6);
+							var colorKeys = Object.keys(COLORS);
+							target.tint = COLORS[colorKeys[ran]];		
+						}, 100);
+						setTimeout(() => {
+							clearInterval(target.lightedInterval);
+						}, 3000);
+					};
+				}, 2000);
+				setTimeout(()=>{
+					char.thunderCastedCooldown = false;
+				}, 10000);
+				popupMessage("CAST!!!", char);
+			}
+		}
+		
+        function charHitTarget(char, target) {
+		
+            if (!char.canAttack) {
+                return;
+            }
+			 
+			if (char.skill && char.skill == ENEMY_SKILLS.FIRE) {
+				drawFireCircle(char.x, char.y, char);
+				if (!(target.immunity && target.immunity.indexOf(PLAYER_MODES.FIRE) != -1)) {
+					fireCharacter(target, 5000);
+				}				
+			}
+
+			if (char.skill && char.skill == ENEMY_SKILLS.FROST) {
+				drawIceCircle(char);
+				if (!(target.immunity && target.immunity.indexOf(PLAYER_MODES.FROST) != -1)) {
+					freezeCharacter(target, 3000);
+				}
+			}
+			
+			if (char.skill && char.skill == ENEMY_SKILLS.FORSE) {
+				drawForceSphere(char, target, char.color);
+			}			
+            
+            char.animations.stop();
+			
+			char.animations.play(char.lookRight ? ANIMATIONS.PUNCH_RIGHT : ANIMATIONS.PUNCH_LEFT);
+			
+            hit(char, target);
+            
+            char.canAttack = false;
+			
+            setTimeout(()=>{
+                char.canAttack = true;
+            }, enemyAttackCooldown);
+            processDamageFromCharacter(char.damage, target);
+        }
+        
+        function normalizeAngle(angleDeg) {
+            return angleDeg < 0 ? 180 + (180 - Math.abs(angleDeg)) : angleDeg;
+        }
+        
+        function chase(hunter, pray) {
+            var angleDeg = normalizeAngle(Math.atan2(hunter.y - pray.y, hunter.x - pray.x) * 180 / Math.PI);
+            if ((337.5 < angleDeg && angleDeg <= 22.5) || !angleDeg) {
+                hunter.direction = DIRECTIONS.WEST;
+            } else if (22.5 < angleDeg && angleDeg <= 67.5) {
+                hunter.direction = DIRECTIONS.NORTH_WEST;
+            } else if (67.5 < angleDeg && angleDeg <= 112.5) {
+                hunter.direction = DIRECTIONS.NORTH;
+            } else if (112.5 < angleDeg && angleDeg <= 157.5) {
+                hunter.direction = DIRECTIONS.NORTH_EAST;
+            } else if (157.5 < angleDeg && angleDeg <= 202.5) {
+                hunter.direction = DIRECTIONS.EAST;
+            } else if (202.5 < angleDeg && angleDeg <= 247.5) {
+                hunter.direction = DIRECTIONS.SOUTH_EAST;
+            } else if (247.5 < angleDeg && angleDeg <= 292.5) {
+                hunter.direction = DIRECTIONS.SOUTH;
+            } else if (292.5 < angleDeg && angleDeg <= 337.5) {
+                hunter.direction = DIRECTIONS.SOUTH_WEST;
+            }
+            
+            var correctedDirection = correctEnemyHunting(hunter);            
+            hunter.direction = correctedDirection ? correctedDirection : hunter.direction;
+        }
+        
+        function hit(bat, ball) {
+		
+			var ran = getRandomInt(0, 10);
+			var defaultStrikeForce = 100;
+
+            var strikeForce = bat.strikeForce ? bat.strikeForce : defaultStrikeForce; 
+			strikeForce = ran > 2 ? strikeForce : strikeForce*2;
+			
+			if (ran <= 2) {
+				popupMessage(getRandomStrikeMessage(), ball);
+			}
+            
+            bat.body.velocity.x = 0;
+            bat.body.velocity.y = 0;
+            ball.body.velocity.x = 0;
+            ball.body.velocity.y = 0;            
+            
+            var angleDeg = normalizeAngle(Math.atan2(bat.getCenter().y - ball.getCenter().y, 
+                bat.getCenter().x - ball.getCenter().x) * 180 / Math.PI);
+            
+            if (337.5 < angleDeg || angleDeg <= 22.5) {
+                ball.body.velocity.x = -strikeForce;
+            } else if (22.5 < angleDeg && angleDeg <= 67.5) {
+                ball.body.velocity.x = -strikeForce;
+                ball.body.velocity.y = -strikeForce;
+            } else if (67.5 < angleDeg && angleDeg <= 112.5) {
+                ball.body.velocity.y = -strikeForce;                
+            } else if (112.5 < angleDeg && angleDeg <= 157.5) {
+                ball.body.velocity.x = strikeForce;
+                ball.body.velocity.y = strikeForce;
+            } else if (157.5 < angleDeg && angleDeg <= 202.5) {
+                ball.body.velocity.x = strikeForce;                
+            } else if (202.5 < angleDeg && angleDeg <= 247.5) {
+                ball.body.velocity.x = strikeForce;
+                ball.body.velocity.y = strikeForce;
+            } else if (247.5 < angleDeg && angleDeg <= 292.5) {
+                ball.body.velocity.y = strikeForce;                
+            } else if (292.5 < angleDeg && angleDeg <= 337.5) {
+                ball.body.velocity.x = -strikeForce;
+                ball.body.velocity.y = strikeForce;                
+            }
+            
+        }        
+
+		function getPlayerAttackRadius() {
+			switch (player.mode) {
+				case PLAYER_MODES.SWORD: {
+					return playerAttackRadius*1.5;
+				};			
+				case PLAYER_MODES.FIRE: {
+					return playerAttackRadius*2;
+				};
+				case PLAYER_MODES.THUNDER: {
+					return playerAttackRadius*3;
+				};
+				case PLAYER_MODES.FROST: {
+					return playerAttackRadius*2;
+				};	
+				case PLAYER_MODES.MADNESS: {
+					return playerAttackRadius*2;
+				};	
+				default: {
+					return playerAttackRadius;
+				}				
+			}
+		}
+		
+        function checkPunch(target) {
+
+            var dx = target.getCenter().x - player.getCenter().x;
+            var dy = target.getCenter().y - player.getCenter().y;
+			
+			var radius = getPlayerAttackRadius();
+
+            return !(radius * radius <= dx * dx + dy * dy);
+
+        }
+		
+        function checkTele(target) {
+
+            var dx = target.getCenter().x - player.getCenter().x;
+            var dy = target.getCenter().y - player.getCenter().y;
+			
+			var radius = playerAttackRadius * teleRadiusMultiple;
+
+            return !(radius * radius <= dx * dx + dy * dy);
+
+        }		
+
+        function processDamageFromCharacter(damage, target) {
+			damage = damage ? damage : 5;
+            //target.life = target.life - damage;
+			processDamage(target, damage);
+			popupMessage("-" + damage, target, 12);
+			if (target.isPlayer) {
+				//healthText.text = 'Health: ' + player.life;
+				refreshHealthText();
+			}						
+            target.stunned = true;
+            target.animations.stop();  
+			if (target.life > 0) {
+				if (!target.frozen) {
+					target.animations.play(ANIMATIONS.DAMAGE);
+				}
+				setTimeout(()=>{
+					target.stunned = false;
+				}, 500);				
+			} else {
+				charDeath(target);
+			}
+        }
+		
+		function charDeath(target) {
+			clearCharTimeoutsAndIntervals(target);
+			target.body.velocity.x=0;
+			target.body.velocity.y=0;				
+			target.dead = true;
+			
+			if (target.isPlayer) {
+				needToShowAfterdeath = true;
+				setDefaultMode();
+				target.loadTexture('robo', 0);
+				target.animations.play(ANIMATIONS.DEATH);
+				setPauseFalse();
+				setTimeout(function() {
+					refreshTick(-Math.ceil(score/2));
+					keysCollected = keysCollected - 2;
+					keysCollected = keysCollected < 0 ? 0 : keysCollected;
+					levelKeysCnt = 0;
+					target.dead = false;
+					target.stunned = false;
+					target.life = maxPlayerLife;
+					refreshHealthText();
+					unfreezeCharacter(target);
+					extinguishCharacter(target);
+					nextLevel();
+				}, 1500);
+			} else {
+				target.animations.play(ANIMATIONS.DEATH);
+				setTimeout(()=>{
+					target.kill()
+				}, 1000);
+				for (var i=0; i < enemies.length; i++) {
+					if (enemies[i].mad && (enemies[i].targetInMaddness && (enemies[i].targetInMaddness.idKey == target.idKey))) {
+						delete enemies[i].targetInMaddness;
+					}
+				}
+				
+				//mini worlds chance
+				/*if (target.type === ENEMIES.FLY || target.type === ENEMIES.SPIDER || 
+					target.type === ENEMIES.WASP || target.type === ENEMIES.CATERPILLAR) {
+					var miniWorldsRan = getRandomInt(0, 1000);
+					if (900 < miniWorldsRan && miniWorldsRan < 950) {
+						setMiniWorlds();
+					} 
+				}*/
+			}
+			
+		}
+
+        function moveEnemies() {
+            enemies.forEach(
+                function(member) {                
+                    moveEnemy(member);
+                });
+        };
+
+        function moveEnemy(char) {			
+		
+			if (!char.dead && getRandomInt(0, 150) > 149) {
+				if (char.type == ENEMIES.MERCHANT) {
+					showReplicMessage(getCharacterReplicByType(char.type).replace('{0}', keysCollected), char);
+				} else {
+					showReplicMessage(getCharacterReplicByType(char.type), char);
+				};
+			}
+			
+			if (char.fired) {
+				var ran = getRandomInt(0, 2);
+				var colorKeys = Object.keys(COLORS);
+				char.tint = COLORS[colorKeys[ran]];
+				enemyBurnsEmenies(char);
+			}
+			
+			if (char.frozen) {
+				char.animations.stop();
+				return;
+			}			
+			
+			if (char.lighted) {
+				var ran = getRandomInt(5, 6);
+				var colorKeys = Object.keys(COLORS);
+				char.tint = COLORS[colorKeys[ran]];
+			}
+			
+			if (char.thunderCasted) {
+				var ran = getRandomInt(5, 6);
+				var colorKeys = Object.keys(COLORS);
+				char.tint = COLORS[colorKeys[ran]];
+				//char.animations.play(ANIMATIONS.STOP);
+				char.animations.stop();
+				char.frame = 4;
+				char.body.velocity.x = 0;
+				char.body.velocity.y = 0;
+				return;
+			}
+			
+			if (char.mad) {
+				var ran = getRandomInt(2, 4);
+				var colorKeys = Object.keys(COLORS);
+				char.tint = COLORS[colorKeys[ran]];
+			}
+			
+            if (char.stunned || char.dead || char.rageBorn) {
+                return;
+            }		
+        
+            var choice;
+            var canHit;
+			var canCast;
+			
+			if (char.mad) {
+			
+				var canScan = false;
+			
+				if (!char.targetInMaddness) {
+					for (var i=0; i < enemies.length; i++) {
+						if (enemies[i].idKey != char.idKey && !enemies[i].dead) {
+							canScan = charScanTarget(char, enemies[i])
+							if (canScan) {
+								char.targetInMaddness = enemies[i];
+								break;						
+							}
+						}
+					}
+
+					if (canScan) {
+						canHit = canEnemyHitTarget(char, char.targetInMaddness);
+					}
+
+				} else {
+					canScan = charScanTarget(char, char.targetInMaddness);
+					if (canScan) {
+						canHit = canEnemyHitTarget(char, char.targetInMaddness);
+					} else if (!canScan) {
+						delete char.targetInMaddness;
+					}
+				}
+			
+			} else {
+			
+				canHit = player.mode != PLAYER_MODES.IMMORTAL && canEnemyHitTarget(char, player);
+				
+				if (charScanTarget(char, player)) {
+					if (char.skill == ENEMY_SKILLS.HUNT && !player.found) {
+						player.found = true;
+						setTimeout(() => {
+							player.found = false;
+						}, 1000);
+					}
+				};
+			}
+						
+            if (char.hunting) {
+				if (char.mad && char.targetInMaddness) {
+					chase(char, char.targetInMaddness);
+				} else {
+					chase(char, player);
+				}
+				char.stepsToGo = 50;
+            }
+            if (canHit) {
+				if (char.mad && char.targetInMaddness) {
+					charHitTarget(char, char.targetInMaddness);
+				} else {
+					charHitTarget(char, player);					
+				}                
+            }
+			canCast = canEnemyCastThunder(char, player);
+			if (canCast) {
+				if (char.skill && char.skill == ENEMY_SKILLS.THUNDER && !char.thunderCasted && !char.thunderCastedCooldown) {
+					processThunderCast(char, player);
+				}				
+			}
+			
+            if (char.stepsToGo) {
+                choice = char.direction;
+                char.stepsToGo--;
+            } else {
+                choice = getRandomInt(0, 9);
+                char.direction = choice;
+                char.stepsToGo = 50;
+            }
+
+            char.body.velocity.x = 0;
+            char.body.velocity.y = 0;		
+
+            switch(choice) {
+			
+                case DIRECTIONS.WEST: {
+                    char.body.velocity.x = -char.speed;
+					char.lookRight = false;
+					if (canHit) {
+						char.animations.play(char.lookRight ? ANIMATIONS.PUNCH_RIGHT : ANIMATIONS.PUNCH_LEFT);
+					} else {
+						char.animations.play(ANIMATIONS.LEFT);
+					}
+                    
+                } break;
+                case DIRECTIONS.EAST: {
+                    //  Move to the right                   
+                    
+                    char.body.velocity.x = char.speed;
+                    char.lookRight = true;           
+					if (canHit) {
+						char.animations.play(char.lookRight ? ANIMATIONS.PUNCH_RIGHT : ANIMATIONS.PUNCH_LEFT);
+					} else {
+						char.animations.play(ANIMATIONS.RIGHT);
+					}
+                } break;
+                case DIRECTIONS.NORTH: {
+                    char.body.velocity.y = -char.speed;
+					
+					if (canHit) {
+						char.animations.play(char.lookRight ? ANIMATIONS.PUNCH_RIGHT : ANIMATIONS.PUNCH_LEFT);
+					} else {
+						if (char.lookRight) {
+							char.animations.play(ANIMATIONS.RIGHT);
+						} else {
+							char.animations.play(ANIMATIONS.LEFT);
+						}
+					}					                 
+                } break;
+                case DIRECTIONS.SOUTH: {
+                    char.body.velocity.y = char.speed;
+					
+					if (canHit) {
+						char.animations.play(char.lookRight ? ANIMATIONS.PUNCH_RIGHT : ANIMATIONS.PUNCH_LEFT);
+					} else {
+						if (char.lookRight) {
+							char.animations.play(ANIMATIONS.RIGHT);
+						} else {
+							char.animations.play(ANIMATIONS.LEFT);
+						}
+					}
+                } break;
+                case DIRECTIONS.NORTH_WEST: {
+                    char.body.velocity.x = -char.speed;
+                    char.body.velocity.y = -char.speed;
+					char.lookRight = false;
+					if (canHit) {
+						char.animations.play(char.lookRight ? ANIMATIONS.PUNCH_RIGHT : ANIMATIONS.PUNCH_LEFT);
+					} else {
+						char.animations.play(ANIMATIONS.LEFT);
+					}                    
+                } break;
+                case DIRECTIONS.NORTH_EAST: {
+                    //  Move to the right
+                    char.body.velocity.x = char.speed;
+                    char.body.velocity.y = -char.speed;
+					char.lookRight = true;
+					if (canHit) {
+						char.animations.play(char.lookRight ? ANIMATIONS.PUNCH_RIGHT : ANIMATIONS.PUNCH_LEFT);
+					} else {
+						char.animations.play(ANIMATIONS.RIGHT);
+					}
+                } break;
+                case DIRECTIONS.SOUTH_WEST: {
+                    char.body.velocity.x = -char.speed;
+                    char.body.velocity.y = char.speed;
+					if (canHit) {
+						char.animations.play(char.lookRight ? ANIMATIONS.PUNCH_RIGHT : ANIMATIONS.PUNCH_LEFT);
+					} else {
+						char.animations.play(ANIMATIONS.LEFT);
+					}					
+                } break;
+                case DIRECTIONS.SOUTH_EAST: {
+                    char.body.velocity.x = char.speed;                    
+                    char.body.velocity.y = char.speed;                                    
+					if (canHit) {
+						char.animations.play(char.lookRight ? ANIMATIONS.PUNCH_RIGHT : ANIMATIONS.PUNCH_LEFT);
+					} else {
+						char.animations.play(ANIMATIONS.RIGHT);
+					}					
+                } break;            
+                case DIRECTIONS.NONE: {
+                    char.animations.stop();
+                    char.frame = 4;                  
+                } break;                 
+            }
+            char.lastX = char.x;
+            char.lastY = char.y;
+        }
+		
+		function isMainKeysPressed() {
+			return space.isDown || cursors.left.isDown || cursors.right.isDown || cursors.up.isDown || cursors.down.isDown;
+		}
+
+		var IKeyIsJustPressed = false;
+		var keyIsJustPressed = false;
+		
+        function keysBoard() {
+		
+			if (storyTextJustShown || loading || scene) {
+				return;
+			}
+		
+			if (i.isDown && !IKeyIsJustPressed && !showStoryText) {
+				if (!pause) {
+					setItemsPauseTrue();
+				} else {
+					setPauseFalse();
+				}
+				IKeyIsJustPressed = true;
+				setTimeout(function() {
+					IKeyIsJustPressed = false;
+				}, 500)
+			}
+			
+			if (space.isDown && showStoryText) {
+				setPauseFalse();
+				setReadTexFalse();
+			}
+			
+			if (pause) {
+				return;
+			}
+		
+			if (m.isDown && !isMap && !isMainKeysPressed() && hasCompass) {
+				showGameMap();
+			} else if (isMainKeysPressed() && isMap){
+				restoreGameScreen();
+			} else if (isMap) {
+				return;
+			}
+			
+            //  Reset the players velocity (movement)
+            if (player.stunned || player.dead) {
+                return;
+            }
+            player.body.velocity.x = 0;
+            player.body.velocity.y = 0;
+			
+			if (one.isDown) {
+				//console.log("DEFAULT")
+				selectedItem = ARTIFACTS.FIST;
+				currentItemCursorPosition = {x: 0, y: 0};
+				setDefaultMode();
+			}
+
+			if (two.isDown && FOUND_ARTIFACTS.SWORD) {
+				//console.log("SWORD")
+				selectedItem = ARTIFACTS.SWORD;
+				currentItemCursorPosition = {x: 1, y: 0};
+				setSwordMode();
+			}
+			
+			if (three.isDown && FOUND_ARTIFACTS.FIRE) {
+				//console.log("FIRE")
+				selectedItem = ARTIFACTS.FIRE;
+				currentItemCursorPosition = {x: 2, y: 0};
+				setFireMode();			
+			}
+			
+			if (four.isDown && FOUND_ARTIFACTS.FROST) {
+				//console.log("FROST")
+				selectedItem = ARTIFACTS.FROST;
+				currentItemCursorPosition = {x: 0, y: 1};
+				setFrostMode();			
+			}
+			
+			if (five.isDown && FOUND_ARTIFACTS.THUNDER) {
+				//console.log("THUNDER")
+				selectedItem = ARTIFACTS.THUNDER;
+				currentItemCursorPosition = {x: 1, y: 1};
+				setThunderMode();
+			}
+			
+			if (six.isDown && FOUND_ARTIFACTS.MADNESS) {
+				//console.log("MADNESS")
+				selectedItem = ARTIFACTS.MADNESS;
+				currentItemCursorPosition = {x: 2, y: 1};
+				setMadnessMode();
+			}
+			
+			if (seven.isDown && FOUND_ARTIFACTS.MIMIC) {
+				//console.log("MIMIC")
+				selectedItem = ARTIFACTS.MIMIC;
+				currentItemCursorPosition = {x: 0, y: 2};
+				processMimicMode();
+			}
+			
+			if (eight.isDown && FOUND_ARTIFACTS.VAMPIRE) {
+				//console.log("VAMPIRE")
+				selectedItem = ARTIFACTS.VAMPIRE;
+				currentItemCursorPosition = {x: 1, y: 2};
+				processVampireMode();
+			}
+			
+			if (nine.isDown && FOUND_ARTIFACTS.TELE) {
+				//console.log("TELEKINESIS")
+				selectedItem = ARTIFACTS.TELEKINESIS;
+				currentItemCursorPosition = {x: 2, y: 2};
+				processTeleMode();
+			}
+			
+			if (zero.isDown && FOUND_ARTIFACTS.IMMORTAL) {
+				//console.log("IMMORTAL")
+				selectedItem = ARTIFACTS.IMMORTAL;
+				currentItemCursorPosition = {x: 1, y: 3};
+				processImmortalMode();
+			}
+			
+			if (player.frozen) {
+				return;
+			}
+			
+            if (space.isDown && !player.canAttack) {
+                punch();
+                if (playerLookRight) {
+                    player.animations.play(ANIMATIONS.PUNCH_RIGHT);
+                } else {
+                    player.animations.play(ANIMATIONS.PUNCH_LEFT);
+                }
+				if (pause) {
+					player.animations.stop();
+				}
+                return;
+            }
+			if (cursors.left.isDown) {
+					//  Move to the left
+					player.body.velocity.x = -playerStep;
+					if (!space.isDown)
+					player.animations.play(ANIMATIONS.LEFT);
+					playerLookRight = false;
+				} else if (cursors.right.isDown) {
+					//  Move to the right
+					player.body.velocity.x = playerStep;
+					if (!space.isDown)
+					player.animations.play(ANIMATIONS.RIGHT);
+					playerLookRight = true;
+				} 
+
+				if (cursors.up.isDown) {
+					player.body.velocity.y = -playerStep;
+					if (playerLookRight) {
+						if (!space.isDown)
+						player.animations.play(ANIMATIONS.RIGHT);
+					} else {
+						if (!space.isDown)
+						player.animations.play(ANIMATIONS.LEFT);
+					}
+				} else if (cursors.down.isDown) {
+					player.body.velocity.y = playerStep;
+					if (playerLookRight) {
+						if (!space.isDown)
+						player.animations.play(ANIMATIONS.RIGHT);
+					} else {
+						if (!space.isDown)
+						player.animations.play(ANIMATIONS.LEFT);
+					}                
+				}
+			if (!cursors.left.isDown && !cursors.right.isDown && 
+                        !cursors.up.isDown && !cursors.down.isDown &&
+                        !space.isDown) {
+        //                  Stand still
+                    player.animations.stop();
+                    player.frame = 4;
+			}
+        }
+
+
+        function clashEnemies(enemy1, enemy2) {
+            changeEnemyDirection(enemy1);
+            changeEnemyDirection(enemy2);
+        }
+		
+        function nextLevel() {
+			if (levelKeysCnt) {
+				return;
+			}
+			
+			destroyLevel();
+			
+			if (chapter == 8) {
+				needToShowScene = false;
+			}
+			
+			if (needToShowScene) {
+				needToShowScene = false;
+				showScene('scene-' + (chapter+1));
+				setTimeout(()=>{
+					hideScene();
+					showLoading();
+					setTimeout(() => {
+						hideLoading();
+						processNextLevel();
+					}, 1500)
+				}, scenes['scene-' + (chapter+1)].duration)
+			} else if (needToShowCall) {
+				needToShowCall = false;
+				showScene('call-' + Math.abs(5 - showTeleCallsList.length));
+				setTimeout(()=>{
+					hideScene();
+					showLoading();
+					setTimeout(() => {
+						hideLoading();
+						processNextLevel();
+					}, 1500)
+				}, scenes['call-' + Math.abs(5 - showTeleCallsList.length)].duration)
+			} else if (needToShowAfterdeath) {
+				needToShowAfterdeath = false;
+				deathCnt = deathCnt < 10 ? ++deathCnt : 10;
+				showScene('afterdeath-' + deathCnt);
+				setTimeout(()=>{
+					hideScene();
+					showLoading();
+					setTimeout(() => {
+						hideLoading();
+						processNextLevel();
+					}, 1500)
+				}, scenes['afterdeath-' + deathCnt].duration)
+			}
+			else {
+				if (!loading) {
+					showLoading();
+					setTimeout(() => {
+						hideLoading();
+						processNextLevel();
+					}, 1500)
+				}
+			}
+			
+        }
+		
+		function processNextLevel() {
+			restoreGameScreen();
+			
+			if (miniWorldsCount > 0) {
+				gameDimention = 5;
+				miniWorldsCount--;
+			} else {
+				gameDimention = getRandomInt(minGameDimention, maxGameDimention);
+				gameDimention = gameDimention < minGameDimention ? minGameDimention : gameDimention;
+			}
+			
+			game.world.setBounds(0, 0, gameDimention * cellSize, gameDimention * cellSize);
+			buildLevel();
+			
+			cancelImmortal();
+			cancelTelekinesis();
+			cancelMimic();
+			cancelVampire();
+			
+			setImmortalMode(3000);
+			
+			player.bringToTop();
+			
+			popupMessage('[' + levelTypes[levelTypeSelect].name + ']', player);		
+		}
+		
+		function refreshTick(newTick) {
+            score = score + newTick;
+            // scoreText.text = 'Tick: ' + score;
+			scoreText.text = '@ ' + score;
+		}
+		
+        function collectTransistor(player, transistor) {
+
+			popupMessage(5, transistor);
+		
+            // Removes the micro from the screen
+            transistor.kill();
+
+            //  Add and update the score
+            refreshTick(5);
+        }
+		
+		function setMiniWorlds() {
+			miniWorldsCount = 10;
+			popupMessage("Miniworlds!!!", player);
+		}
+		
+        function collectMainFile(player, file) {
+
+			popupMessage('Main File', file);
+		
+            // Removes the file from the screen
+            file.kill();
+
+            //  Add and update the chapter
+			
+			showMainFileText();
+            chapter++;
+			needToShowScene = true;
+			keysCollected = 0;
+
+        }
+		
+		function showMainFileText() {
+			showFileText(mainText[chapter]);
+		}
+		
+		function showSimpleFileText() {
+			if (!simpleText[chapter]) {
+				showFileText('No data.');
+				return;
+			}
+			var index = getRandomInt(0, simpleText[chapter].length-1);
+			var text = simpleText[chapter][index];
+			simpleText[chapter].splice(index, 1);
+			showFileText(text);
+		}
+		
+		function showFileText(text) {
+			setReadTextTrue();
+			storyText.x = game.camera.x + 20;
+			storyText.y = game.camera.y + 20;
+			storyText.text = text;
+			storyText.fill = '#' + player.color.replace('0x', '');
+			storyText.padding.set(0, -10);
+			storyText.stroke = 'black';
+			storyText.strokeThickness = 9;
+			storyText.visible = true;
+			/*player.body.velocity.x = 0;
+			player.body.velocity.y = 0;
+			player.animations.stop()*/
+		}
+		
+        function collectFile(player, file) {
+			popupMessage('File', file);		
+            // Removes the file from the screen
+            file.kill();
+            //  Add and update the chapter			
+			showSimpleFileText();
+        }
+		
+        function collectArtifact(player, artifact) {
+			popupMessage(ARTIFACTS_MESSAGES[artifact.artifact], artifact);
+            artifact.kill();
+            FOUND_ARTIFACTS[artifact.artifact] = true;
+        }		
+		
+		function collectKey(player, key) {
+		
+			popupMessage('Key', key);
+		
+			keysCollected++;
+			key.kill();
+			levelKeysCnt--;
+			
+			if (!levelKeysCnt) {
+				exit.animations.play(ANIMATIONS.SHOW);				
+			}
+			
+			if (showTeleCallsList[0] && 
+					showTeleCallsList[0].chapter === chapter && showTeleCallsList[0].keysCollected <= keysCollected) {
+				needToShowCall = true;
+				showTeleCallsList.shift();
+			}
+		}
+		
+		function collectCompass(player, compass) {
+			popupMessage('Map', compass);
+			compass.kill();
+			hasCompass = true;
+		}		
+
+        function collectMicro(player, micro) {
+
+			popupMessage(10, micro);
+		
+            // Removes the micro from the screen
+            micro.kill();
+
+            //  Add and update the score
+            refreshTick(10);			
+
+        }
+		
+        function collectCpu(player, cpu) {
+
+			popupMessage(25, cpu);
+		
+            // Removes the micro from the screen
+            cpu.kill();
+
+            //  Add and update the score
+            refreshTick(25);
+
+        }
+		
+        function collectMega(player, mega) {
+
+			popupMessage(100, mega);
+		
+            // Removes the micro from the screen
+            mega.kill();
+
+            //  Add and update the score
+            refreshTick(100);
+
+        }		
+		
+        function collectLife(player, life) {
+
+			popupMessage('+10', life);
+		
+            // Removes the micro from the screen
+            life.kill();
+
+            //  Add and update the score
+			var newLife = player.life + 10;
+            player.life = newLife > maxPlayerLife ? maxPlayerLife : newLife;
+            //healthText.text = 'Health: ' + player.life;
+			refreshHealthText();
+
+        }
+
+        function collectSuperLife(player, superLife) {
+
+			popupMessage('+50', superLife);
+		
+            // Removes the micro from the screen
+            superLife.kill();
+
+            //  Add and update the score
+			var newLife = player.life + 50;
+            player.life = newLife > maxPlayerLife ? maxPlayerLife : newLife;
+            refreshHealthText();
+        }
+
+        function changeEnemyDirection(enemy) {
+            enemy.direction = getAnotherDirection(enemy.direction);
+            enemy.stepsToGo = 0;
+        }
+
+        function getAnotherDirection(direction) {
+            var directions = [];
+            for (dir in DIRECTIONS) {
+                directions.push(DIRECTIONS[dir]);
+            }
+            return directions.length = direction-1 ? directions[0] : directions[direction + 1];
+        }
+
+
+
+        function render() {
+    //        game.debug.cameraInfo(game.camera, 32, 32);
+    //        game.debug.spriteCoords(player, 32, 500);
+        }
+
+		function getSpecialLevelTypeIndex() {
+			var ran = getRandomInt(1, 200);
+			if (ran >= 100 && ran <= 105) {
+				return 0;
+			}
+			return false;
+		}
+		
+        function buildLevel(isFirst) {
+		
+			if (chapter == 8) {
+				showFinale();
+				return;
+			}
+		
+            generateLevel();
+			
+			var appearedArtifacts = [];
+			
+			var specialLevelTypeIndex = getSpecialLevelTypeIndex();
+			
+			if (isFirst) {
+				levelTypeSelect = levelTypes.indexOf(levelTypes.find(level => level.id == -1));
+			} else if (specialLevelTypeIndex === 0) {
+				levelTypeSelect = levelTypes.indexOf(levelTypes.find(level => level.id == 0));
+			} else {
+				var enabledLevelTypesIds = chapterLevelTypes[chapter];
+				var ranLevelTypeId = getRandomInt(0, enabledLevelTypesIds.length-1);			
+				var levelTypeIdByChapter = enabledLevelTypesIds[ranLevelTypeId];
+				levelTypeSelect = levelTypes.indexOf(levelTypes.find(level => level.id == levelTypeIdByChapter));
+			}
+			
+			//select level --jojo
+			//levelTypeSelect = 1
+			
+			player.color = getColor(COLORS, levelTypes[levelTypeSelect].robo);
+			player.tint = player.color;
+			
+			paintItemIcons(levelTypeSelect);
+			
+            for (var i=0; i < level.length; i++) {
+                for (var j=0; j < level[i].length; j++) {
+								
+                    var x = i*cellSize;
+                    var y = j*cellSize;
+
+                    if (level[i][j] == 99) {
+                        player.x = y+10;
+                        player.y = x;
+                    }
+                    
+                    if (level[i][j] == 100) {
+					
+						var openExitColor = getColor(OPEN_EXIT_COLORS, levelTypes[levelTypeSelect].exit);
+						var closedExitColor = getColor(CLOSED_EXIT_COLORS, levelTypes[levelTypeSelect].exit);
+					
+					    exit.animations.add(ANIMATIONS.SHOW, openExitColor, 10, true);
+						exit.animations.add(ANIMATIONS.CLOSED, closedExitColor, 1, false);
+						exit.animations.play(ANIMATIONS.CLOSED);
+						if (!levelKeysCnt) {
+							exit.animations.play(ANIMATIONS.SHOW);
+						}						
+                        exit.x = y;
+                        exit.y = x;
+                    }      
+
+                    if (level[i][j] == 101) {
+						var k = game.add.sprite(y, x, 'key');	
+						k.tint = getColor(COLORS, levelTypes[levelTypeSelect].key);
+						game.physics.arcade.enable(k);
+						k.body.immovable = true;
+						k.animations.add(ANIMATIONS.SHOW, [0, 1, 2, 3], 7, true);
+						k.animations.play(ANIMATIONS.SHOW);
+						keys.add(k);
+                    }
+                
+                    if (level[i][j] == 9) {
+                        putEnemy(y+10, x, levelTypeSelect);
+                    }
+                    if (level[i][j] != 1) {
+                        floors.create(y, x, levelTypes[levelTypeSelect].floor);
+                    }
+                    if (level[i][j] == 11) {
+						floors.create(y, x, levelTypes[levelTypeSelect].floor);
+						var file = game.add.sprite(y, x, 'file');							
+						mainFiles.add(file);
+						items.push(file);
+						continue;
+                    }
+                    if (level[i][j] == 12) {
+						floors.create(y, x, levelTypes[levelTypeSelect].floor);
+						var file = game.add.sprite(y, x, 'file');							
+						files.add(file);
+						items.push(file);
+						continue;
+                    }
+                    if (level[i][j] == 1) {
+						
+						if (levelTypes[levelTypeSelect]['wall-anima']) {
+							var animatedWallRandom = getRandomInt(0, 100);
+							var wallAnimaChance = levelTypes[levelTypeSelect]['wall-anima-chance'] ? levelTypes[levelTypeSelect]['wall-anima-chance'] : 5; 
+							if (wallAnimaChance <= animatedWallRandom) {
+								var wall = platforms.create(y, x, levelTypes[levelTypeSelect].wall);
+								wall.body.immovable = true;
+							} else {
+								var animatedWall = game.add.sprite(y, x, levelTypes[levelTypeSelect]['wall-anima']);	
+								game.physics.arcade.enable(animatedWall);
+								animatedWall.body.immovable = true;
+								var animationSpeed = levelTypes[levelTypeSelect]['wall-anima-speed'] ? levelTypes[levelTypeSelect]['wall-anima-speed'] : 7;
+								animatedWall.animations.add(ANIMATIONS.SHOW, [0, 1, 2, 3, 0], animationSpeed, true);
+								animatedWall.animations.play(ANIMATIONS.SHOW);
+								platforms.add(animatedWall);
+							}						
+						} else {
+							var wall = platforms.create(y, x, levelTypes[levelTypeSelect].wall);
+							wall.body.immovable = true;						
+						}
+                    }
+                    if (level[i][j] == 2) {
+						var tran = game.add.sprite(y, x, 'transistor');							
+						transistors.add(tran);
+						items.push(tran);
+                    }
+                    if (level[i][j] == 3) {
+						var mic = game.add.sprite(y, x, 'micro');
+						micros.add(mic);
+						items.push(mic);
+                    }
+                    if (level[i][j] == 4) {
+						var cp = game.add.sprite(y, x, 'cpu');
+						cpus.add(cp);
+						items.push(cp);
+                    }
+					if (level[i][j] == 5) {
+						var lf = game.add.sprite(y, x, 'life');
+						lifes.add(lf);
+						items.push(lf);
+                    }
+                    if (level[i][j] == 6) {
+						var mg = game.add.sprite(y, x, 'mega');
+						megas.add(mg);
+						items.push(mg);
+                    }
+					if (level[i][j] == 7) {
+						var slf = game.add.sprite(y, x, 'super-life');
+						superLifes.add(slf);
+						items.push(slf);
+                    }
+					if (level[i][j] == 8) {
+						var cmpss = game.add.sprite(y, x, 'compass');
+						compasses.add(cmpss);
+						items.push(cmpss);
+                    }
+                    if (level[i][j] == 10) {
+						var artSprite = getArtifactSprite(appearedArtifacts);
+						if (artSprite && artSprite.length) {
+							var art = game.add.sprite(y, x, artSprite);
+							art.artifact = artSprite.toUpperCase();
+							artifacts.add(art);
+							items.push(art);						
+						}
+                    }
+                }
+            }
+			
+			prepareItems(levelTypeSelect);
+			prepareInfo(levelTypeSelect);
+			paintMainFile();
+
+        }
+		
+		function getArtifactSprite(appearedArtifacts) {
+			var allArtKeys = Object.keys(ARTIFACTS);
+			var actualArtKeys = [];
+			
+			allArtKeys.forEach(function(artKey) {
+				if (!FOUND_ARTIFACTS[artKey] && appearedArtifacts.indexOf(artKey.toLowerCase()) == -1) {										
+					actualArtKeys.push(artKey.toLowerCase());
+				}
+			})
+						
+			var res = actualArtKeys.length ? actualArtKeys[getRandomInt(0, actualArtKeys.length-1)] : '';
+			appearedArtifacts.push(res);
+			return res;
+		}
+		
+		function prepareInfo(levelTypeSelect) {
+			var infoColor = levelTypes[levelTypeSelect].info ? levelTypes[levelTypeSelect].info : COLORS.WHITE;
+			scoreText.tint = getColor(COLORS, infoColor);
+			healthText.tint = getColor(COLORS, infoColor);
+			enemyHealthText.tint = getColor(COLORS, infoColor);
+			button.tint = getColor(COLORS, infoColor == BLACK_COLOR ? COLORS.WHITE : infoColor);
+			compassItem.tint = getColor(COLORS, infoColor == BLACK_COLOR ? COLORS.WHITE : infoColor);
+		}
+		
+		function prepareItems(levelTypeSelect) {		
+            items.forEach(
+                function(item) {
+				
+					item.tint = getColor(COLORS, levelTypes[levelTypeSelect].figure);
+					game.physics.arcade.enable(item);
+					item.body.immovable = true;
+					item.animations.add(ANIMATIONS.SHOW, [0, 1, 2, 3], 7, true);
+					item.animations.play(ANIMATIONS.SHOW);				
+				
+		            item.getCenter = ()=>{
+						return {
+							x: item.x + 24,
+							y: item.y + 24
+						}
+					}
+				}
+			);
+		}
+        
+        function isPointInside(x, y, x1, y1, x2, y2) {
+            return x >= x1 && y >= y1 && x <= x2 && y <= y2
+        }
+        
+        function correctEnemyHunting(enemy) {
+            
+            var shift = 5;
+                        
+            if ([DIRECTIONS.NORTH_WEST, DIRECTIONS.NORTH_EAST, 
+                    DIRECTIONS.SOUTH_WEST, DIRECTIONS.SOUTH_EAST].indexOf(enemy.direction) != -1) {                    
+                return;
+            }
+            
+            var result;
+            
+            switch(enemy.direction) {
+                case DIRECTIONS.WEST: {
+                    if (!isPoinOnTheFloor(enemy.x-shift, enemy.y) /*&&
+                            isPoinOnTheFloor(enemy.x-shift, enemy.y+enemy.height)*/) {
+                        result = DIRECTIONS.SOUTH_WEST;
+                    } else if (!isPoinOnTheFloor(enemy.x-shift, enemy.y+enemy.height) /*&&
+                            isPoinOnTheFloor(enemy.x-shift, enemy.y)*/) {
+                        result = DIRECTIONS.NORTH_WEST;
+                    }
+                } break;
+                case DIRECTIONS.EAST: {
+                    if (!isPoinOnTheFloor((enemy.x + enemy.width)+shift, enemy.y) /*&&
+                            isPoinOnTheFloor((enemy.x + enemy.width)+shift, enemy.y+enemy.height)*/) {
+                        result = DIRECTIONS.SOUTH_EAST;
+                    } else if (!isPoinOnTheFloor((enemy.x + enemy.width)+shift, enemy.y+enemy.height) /*&&
+                            isPoinOnTheFloor((enemy.x + enemy.width)+shift, enemy.y)*/) {
+                        result = DIRECTIONS.NORTH_EAST;
+                    }                        
+                } break;
+                case DIRECTIONS.NORTH: {
+                    if (!isPoinOnTheFloor(enemy.x, enemy.y-shift) /*&&
+                            isPoinOnTheFloor(enemy.x + enemy.width, enemy.y-shift)*/) {
+                        result = DIRECTIONS.NORTH_EAST;
+                    } else if (!isPoinOnTheFloor(enemy.x + enemy.width, enemy.y-shift) /*&&
+                            isPoinOnTheFloor(enemy.x, enemy.y-shift)*/) {
+                        result = DIRECTIONS.NORTH_WEST;
+                    }                        
+                } break;
+                case DIRECTIONS.SOUTH: {
+                    if (!isPoinOnTheFloor(enemy.x, (enemy.y + enemy.height)+shift) /*&&
+                            isPoinOnTheFloor(enemy.x + enemy.width, (enemy.y + enemy.height)+shift)*/) {
+                        result = DIRECTIONS.SOUTH_EAST;
+                    } else if (!isPoinOnTheFloor(enemy.x + enemy.width, (enemy.y + enemy.height)+shift) /*&&
+                            isPoinOnTheFloor(enemy.x, (enemy.y + enemy.height)+shift)*/) {
+                        result = DIRECTIONS.SOUTH_WEST;
+                    }                        
+                } break;
+            default: {
+                  
+                }
+            }            
+            
+            return result;
+
+        }
+        
+        function isPoinOnTheFloor(x, y) {
+            for (var i=0; i < floors.children.length; i++) {
+                if (isPointInside(x, y, 
+                    floors.children[i].x, floors.children[i].y, 
+                    floors.children[i].x + cellSize, floors.children[i].y + cellSize)) {
+                        return true;
+                }
+            }
+            return false;
+        }        
+        
+        function hitWall(enemy) {
+			if (!enemy.hunting) {
+				changeEnemyDirection(enemy);
+			}            
+        }
+		
+		function getMaxEnemiesTypesByChapter() {
+			switch(chapter) {
+				case 1: {
+					return 0;
+				};
+				case 2: {
+					return 3;
+				};
+				case 3: {
+					return 5;
+				};
+				case 4: {
+					return 7;
+				};
+				case 5: {
+					return 9;
+				};
+				case 6: {
+					return 9;
+				};
+				case 7: {
+					return 9;
+				};
+			}
+		}
+		
+		function onlyOneKonungrForVikings() {		
+			if (!currentLevelFlags.konungr) {
+				currentLevelFlags.konungr = true;
+				return ENEMIES.KONUNGR;
+			}
+			return ENEMIES.VIKING;
+		}
+
+		function getEnemyType(levelTypeSelect) {
+			var specialSelect = getRandomInt(0, 100);
+			var enemiesList;
+			enemiesList = levelTypeSelect != null ? levelTypes[levelTypeSelect].enemies : null;
+			
+			if (enemiesList) {
+				var currentEnemyType = enemiesList[getRandomInt(0, enemiesList.length-1)];
+				if (currentEnemyType == ENEMIES.KONUNGR) {
+					return onlyOneKonungrForVikings();
+				}
+				return currentEnemyType;
+			}
+			
+			if (specialSelect > 99) {
+				return ENEMIES.VIKING;
+			}
+			
+			if (specialSelect > 94) {
+				return ENEMIES.MERCHANT;
+			}
+			
+			var select = getRandomInt(0, 4 + getMaxEnemiesTypesByChapter());
+			switch(select) {
+				case 0: {
+					return ENEMIES.IRON;
+				};
+				case 1: {
+					return ENEMIES.TOWER;
+				};
+				case 2: {
+					return ENEMIES.FLY;
+				};
+				case 3: {
+					return ENEMIES.TIN;
+				};
+				case 4: {
+					return ENEMIES.SPIDER;
+				};		
+				case 5: {
+					return ENEMIES.SQUARE;
+				};				
+				case 6: {
+					return ENEMIES.CATERPILLAR;
+				};				
+				case 7: {
+					return ENEMIES.ORB;
+				};
+				case 8: {
+					return getRandomInt(0, 20) > 15 ? ENEMIES.RINO : ENEMIES.DINO;
+				};
+				case 9: {
+					return getRandomInt(0, 20) > 15 ? ENEMIES.GENERATOR : ENEMIES.HOUND;
+				};
+				case 10: {
+					return ENEMIES.WOLF;
+				};
+				case 11: {
+					return ENEMIES.WASP;
+				};
+				case 12: {
+					return ENEMIES.FOX;
+				};
+				case 13: {
+					return ENEMIES.FREEZE;
+				};				
+			}
+		}
+
+		function getEnemyDataByType(type) {
+			switch(type) {
+				case ENEMIES.MODULE: {
+					return {
+						sprite: ENEMIES.MODULE,
+						life: 25,
+						speed: 140,
+						damage: 5,
+						scan: 150 * scanMultiple,
+						rageChance: 25
+					};
+				};
+				case ENEMIES.IRON: {
+					return {
+						sprite: ENEMIES.IRON,
+						life: 25,
+						speed: 140,
+						damage: 5,
+						scan: 150 * scanMultiple,
+						rageChance: 25
+					};
+				};
+				case ENEMIES.TOWER: {
+					return {
+						sprite: ENEMIES.TOWER,
+						life: 45,
+						speed: 120,
+						damage: 15,
+						scan: 170 * scanMultiple,
+						strikeForce: 200,
+						rageChance: 35
+					};
+				};
+				case ENEMIES.FLY: {
+					return {
+						sprite: ENEMIES.FLY,
+						life: 15,
+						speed: 160,
+						damage: 1,
+						scan: 200 * scanMultiple,
+						immunity: [PLAYER_MODES.SWORD],
+						strikeForce: 50
+					};
+				};
+				case ENEMIES.SPIDER: {
+					return {
+						sprite: ENEMIES.SPIDER,
+						life: 15,
+						speed: 150,
+						damage: 2,
+						scan: 150 * scanMultiple,
+						immunity: [PLAYER_MODES.SWORD],
+						strikeForce: 50
+					};
+				};				
+				case ENEMIES.TIN: {
+					return {
+						sprite: ENEMIES.TIN,
+						life: 35,
+						speed: 180,
+						damage: 8,
+						scan: 140 * scanMultiple,
+						rageChance: 30
+					};
+				};
+				case ENEMIES.VIKING: {
+					return {
+						sprite: ENEMIES.VIKING,
+						life: 65,
+						speed: 170,
+						damage: 20,
+						scan: 200 * scanMultiple,
+						immunity: [PLAYER_MODES.FROST],
+						strikeForce: 150,
+						rageChance: 60,
+						rageTime: 3000
+					};
+				};
+				case ENEMIES.KONUNGR: {
+					return {
+						sprite: ENEMIES.KONUNGR,
+						life: 85,
+						speed: 190,
+						damage: 40,
+						scan: 200 * scanMultiple,
+						immunity: [PLAYER_MODES.FROST],
+						skill: [ENEMY_SKILLS.THUNDER],
+						strikeForce: 150,
+						rageChance: 60,
+						rageTime: 3000,
+						castRadius: 120,
+						fixedColor: COLORS.BLUE
+					};
+				};
+				case ENEMIES.ORB: {
+					return {
+						sprite: ENEMIES.ORB,
+						life: 40,
+						speed: 150,
+						damage: 15,
+						scan: 160 * scanMultiple,
+						immunity: [PLAYER_MODES.THUNDER],
+						rageChance: 35,
+						attackRadius: 50
+					};
+				};
+				case ENEMIES.SQUARE: {
+					return {
+						sprite: ENEMIES.SQUARE,
+						life: 40,
+						speed: 130,
+						damage: 12,
+						scan: 150 * scanMultiple,
+						immunity: [PLAYER_MODES.MADNESS],
+						rageChance: 25
+					};
+				};
+				case ENEMIES.HOUND: {
+					return {
+						sprite: ENEMIES.HOUND,
+						life: 40,
+						speed: 175,
+						damage: 17,
+						scan: 160 * scanMultiple,
+						skill: [ENEMY_SKILLS.HUNT],
+						strikeForce: 110,
+						rageChance: 35,
+						attackRadius: 50
+					};
+				};
+				case ENEMIES.WOLF: {
+					return {
+						sprite: ENEMIES.WOLF,
+						life: 65,
+						speed: 150,
+						damage: 25,
+						scan: 150 * scanMultiple,
+						immunity: [PLAYER_MODES.FIRE, PLAYER_MODES.FROST, PLAYER_MODES.THUNDER, PLAYER_MODES.MADNESS, PLAYER_MODES.VAMPIRE],
+						strikeForce: 250,
+						rageChance: 75,
+						rageTime: 2700,
+						attackRadius: 60
+					};
+				};
+				case ENEMIES.CATERPILLAR: {
+					return {
+						sprite: ENEMIES.CATERPILLAR,
+						life: 10,
+						speed: 120,
+						damage: 5,
+						scan: 200 * scanMultiple,
+						immunity: [PLAYER_MODES.SWORD],
+						strikeForce: 50,
+						attackRadius: 60
+					};
+				};					
+				case ENEMIES.RABBIT: {
+					return {
+						sprite: ENEMIES.RABBIT,
+						life: 25,
+						speed: 160,
+						damage: 10,
+						scan: 110 * scanMultiple,
+						immunity: [PLAYER_MODES.FIRE, PLAYER_MODES.FROST],
+						strikeForce: 90
+					};
+				};
+				case ENEMIES.SPHERE: {
+					return {
+						sprite: ENEMIES.SPHERE,
+						life: 50,
+						speed: 100,
+						damage: 25,
+						scan: 180 * scanMultiple,
+						immunity: [PLAYER_MODES.THUNDER],
+						skill: [ENEMY_SKILLS.FORSE],
+						strikeForce: 160,
+						attackRadius: 70,
+						rageChance: 40,
+						rageTime: 2500
+					};
+				};
+				case ENEMIES.WASP: {
+					return {
+						sprite: ENEMIES.WASP,
+						life: 15,
+						speed: 100,
+						damage: 10,
+						scan: 200 * scanMultiple,
+						immunity: [PLAYER_MODES.SWORD],
+						strikeForce: 160,
+						skill: [ENEMY_SKILLS.FIRE],
+						attackRadius: 40
+					};
+				};
+				case ENEMIES.FOX: {
+					return {
+						sprite: ENEMIES.FOX,
+						life: 70,
+						speed: 150,
+						damage: 27,
+						scan: 170 * scanMultiple,
+						immunity: [PLAYER_MODES.FIRE, PLAYER_MODES.FROST, PLAYER_MODES.THUNDER, PLAYER_MODES.MADNESS],
+						skill: [ENEMY_SKILLS.HUNT],
+						strikeForce: 200,
+						rageChance: 70,
+						rageTime: 2500,
+						attackRadius: 60
+					};
+				};
+				case ENEMIES.FREEZE: {
+					return {
+						sprite: ENEMIES.FREEZE,
+						life: 35,
+						speed: 120,
+						damage: 15,
+						scan: 150 * scanMultiple,
+						immunity: [PLAYER_MODES.FROST],
+						skill: [ENEMY_SKILLS.FROST],
+						strikeForce: 150,
+						attackRadius: 65,
+						rageChance: 30,
+						rageTime: 2200
+					};
+				};
+				case ENEMIES.RINO: {
+					return {
+						sprite: ENEMIES.RINO,
+						life: 200,
+						speed: 130,
+						damage: 40,
+						scan: 150 * scanMultiple,
+						strikeForce: 250,
+						rageChance: 75,
+						rageTime: 2700,
+						attackRadius: 50
+					};
+				};
+				case ENEMIES.DINO: {
+					return {
+						sprite: ENEMIES.DINO,
+						life: 160,
+						speed: 120,
+						damage: 50,
+						scan: 150 * scanMultiple,
+						skill: [ENEMY_SKILLS.FIRE],
+						strikeForce: 250,
+						rageChance: 75,
+						rageTime: 2700,
+						attackRadius: 50
+					};
+				};
+				case ENEMIES.GENERATOR: {
+					return {
+						sprite: ENEMIES.GENERATOR,
+						life: getRandomInt(20, 120),
+						speed: getRandomInt(100, 250),
+						damage: getRandomInt(5, 75),
+						scan: getRandomInt(100, 300) * scanMultiple,
+						rageChance: getRandomInt(5, 100),
+						rageTime: getRandomInt(1000, 500),
+						immunity: getRandomImmunity(),
+						skill: getRandomSkills(),
+					};
+				};
+				case ENEMIES.SPACE: {
+					return {
+						sprite: ENEMIES.SPACE,
+						life: 65,
+						speed: 150,
+						damage: 25,
+						scan: 150 * scanMultiple,
+						strikeForce: 250,
+						rageChance: 75,
+						rageTime: 2700,
+						attackRadius: 60
+					};
+				};
+				case ENEMIES.MERCHANT: {
+					return {
+						sprite: ENEMIES.MERCHANT,
+						life: 100,
+						speed: 50,
+						damage: 10,
+						scan: 150 * scanMultiple,
+						skill: [ENEMY_SKILLS.ALLY, ENEMY_SKILLS.TRADE],
+						strikeForce: 150
+					};
+				};
+			}
+		}
+		
+		function getRandomImmunity() {
+			var keys = Object.keys(PLAYER_MODES);
+			keys.splice(keys.indexOf('DEFAULT'), 1);
+			var rnd = getRandomInt(0, keys.length);
+			var res = [];
+			for (var i=0; i < rnd; i++) {
+				var r = getRandomInt(0, keys.length);
+				res.push(PLAYER_MODES[keys[r]]);
+				keys.splice(r, 1);
+			}
+			return res;
+		}
+		
+		function getRandomSkills() {
+			var keys = Object.keys(ENEMY_SKILLS);
+			keys.splice(keys.indexOf('ALLY'), 1);
+			keys.splice(keys.indexOf('TRADE'), 1);
+			var rnd = getRandomInt(0, keys.length);
+			var res = [];
+			for (var i=0; i < rnd; i++) {
+				var r = getRandomInt(0, keys.length);
+				res.push(ENEMY_SKILLS[keys[r]]);
+				keys.splice(r, 1);
+			}
+			return res;
+		}
+		
+        function putEnemy(y, x, levelTypeSelect) {
+			if (levelTypeSelect == null) {
+				levelTypeSelect = 4;
+			}
+			var enemyData = getEnemyDataByType(getEnemyType(levelTypeSelect))
+            var en = game.add.sprite(y, x, enemyData.sprite);
+			en.color = enemyData.fixedColor ? enemyData.fixedColor : getColor(COLORS, levelTypes[levelTypeSelect].enemy);
+			en.tint = en.color;
+
+            game.physics.arcade.enable(en);
+
+            en.body.collideWorldBounds = true;
+			en.body.drag.setTo(100);
+            en.animations.add(ANIMATIONS.LEFT, [0, 1, 2, 3], 10, true);
+            en.animations.add(ANIMATIONS.RIGHT, [5, 6, 7, 8], 10, true);
+            en.animations.add(ANIMATIONS.PUNCH_LEFT, [9, 10, 11], 10, true);
+            en.animations.add(ANIMATIONS.PUNCH_RIGHT, [12, 13, 14], 10, true);
+			en.animations.add(ANIMATIONS.DAMAGE, [15, 16], 10, true);
+			en.animations.add(ANIMATIONS.DEATH, [17, 18, 19, 20], 5, false);
+            en.lookRight = true;
+            en.stepsToGo = 50;
+            en.direction = DIRECTIONS.WEST;
+            en.idKey = enemyIdKey++;
+            en.lastX = y;
+            en.lastY = x;
+            en.hunting = false;
+			en.immunity = enemyData.immunity;
+			en.type = enemyData.sprite;
+            en.life = enemyData.life;
+			en.speed = enemyData.speed;
+			en.damage = enemyData.damage;
+			en.scan = enemyData.scan;
+			en.skill = enemyData.skill;
+			en.strikeForce = enemyData.strikeForce;
+			en.attackRadius = enemyData.attackRadius;
+			en.castRadius = enemyData.castRadius;
+			en.rageChance = enemyData.rageChance;
+			en.rageTime = enemyData.rageTime;
+            en.canAttack = en.type === ENEMIES.MERCHANT ? false : true;
+			if (en.type === ENEMIES.MERCHANT) {
+				en.availableSkills = getAvailableSkillTradingForMerchant();
+			}
+            en.getCenter = ()=> {
+                return {
+                    x: en.x + 16,
+                    y: en.y + 24
+                }
+            }            
+            enemies.push(en);
+
+        }
+		
+		function getAvailableSkillTradingForMerchant() {
+			//migo
+			var res = {
+				SPEED: getRandomInt(0, 10) > 5 ? true : false,
+				POWER: getRandomInt(0, 10) > 5 ? true : false,
+				HEALTH: getRandomInt(0, 10) > 5 ? true : false,
+				INTELLECT: getRandomInt(0, 10) > 5 ? true : false
+			}
+			if (getValues(res).indexOf(true) == -1) {
+				var randomIndex = getRandomInt(0, 3);
+				Object.keys(res).forEach((key, index) => {
+					if (randomIndex === index) {
+						res[key] = true;
+					}
+				})
+			}
+			return res;
+		}
+
+		function getMaxEnemies(gameDimention) {
+			if (gameDimention < 11) {
+				return 5;
+			}
+			if (gameDimention < 15) {
+				return 7;
+			}
+			if (gameDimention < 20) {
+				return 12;
+			}
+			if (gameDimention < 23) {
+				return 15;
+			}
+			return 20;
+		}
+		
+		function getMaxKeys(gameDimention) {
+			if (gameDimention < 11) {
+				return 0;
+			}
+			if (gameDimention < 16) {
+				return 1;
+			}
+			if (gameDimention < 21) {
+				return 2;
+			}
+			if (gameDimention < 25) {
+				return 3;
+			}			
+			return 4;
+		}		
+		
+		function checkIsYellowBrick(x, y, yellowBrickRoad) {
+			for (var i=0; i < yellowBrickRoad.length; i++) {
+				if (yellowBrickRoad[i].x === x && yellowBrickRoad[i].y === y) {
+					return true;
+				}
+			}
+			return false;
+		}
+		
+		function isKey(x, y) {
+			for (var i=0; i <= levelKeysList.length-1; i++) {
+				if (levelKeysList[i].x == x && levelKeysList[i].y == y) {
+					return true;
+				}
+			}
+			return false;
+		}
+		
+        function generateLevel() {
+            level = [];
+
+            for (var i=0; i < gameDimention; i++) {
+				level.push([])
+				for (var j=0; j < gameDimention; j++) {
+						level[i].push(0)
+				}
+            }        
+			
+            var playerStartPoint = generatePlayerStart(level);
+            var exitPoint = generateExit(level);
+			
+			var maxKeys = getMaxKeys(gameDimention);
+			levelKeysList = generateKeys(level, maxKeys);
+			levelKeysCnt = levelKeysList.length;
+			
+			var yellowBrickRoad = buildYellowBrickRoad(level, playerStartPoint, exitPoint);
+			
+			//stich
+			
+			levelKeysList.forEach((key)=>{
+				var randomYellowBrick = yellowBrickRoad[getRandomInt(0, yellowBrickRoad.length-1)];
+				if (randomYellowBrick) {
+					yellowBrickRoad.push.apply(yellowBrickRoad, buildYellowBrickRoad(level, randomYellowBrick, key));
+				} else {
+					yellowBrickRoad.push.apply(yellowBrickRoad, buildYellowBrickRoad(level, playerStartPoint, key));
+				}
+			});
+			
+            var maxEnemies = getMaxEnemies(gameDimention);
+			
+			var compassPosition = getRandomInt(0, 3) * (gameDimention/4);
+			var canCompass = gameDimention >= 15 ? true : false;
+			
+			var hasFile = false;
+			
+			var simpleTextCntLeft = simpleText[chapter].length;
+
+            for (var i=0; i < gameDimention; i++) {
+                for (var j=0; j < gameDimention; j++) {
+					if ((playerStartPoint.x == i && playerStartPoint.y == j) || 
+						(exitPoint.x == i && exitPoint.y == j)) {
+						continue;
+					}
+					if (isKey(i, j)) {
+						continue;
+					}
+                    var ran = getRandomInt(1, 1000);
+                    if (ran <= 300) {
+						if (!checkIsYellowBrick(i, j, yellowBrickRoad)) {
+							level[i][j] = 1;
+						} else if (keysCollected > 8 && getRandomInt(0, 100) > 90 && !hasFile) {
+						//} else if (keysCollected > 0 && getRandomInt(0, 100) > 0 && !hasFile) {
+							level[i][j] = 11;
+							hasFile = true;
+						}
+                    } else if (300 < ran && ran <= 310) {
+						if (simpleTextCntLeft > 0 && getRandomInt(0, 100) > 90) {
+							simpleTextCntLeft--;
+							level[i][j] = 12;
+						}
+                    } else if (310 < ran && ran <= 325 && maxEnemies) {
+                        level[i][j] = 9;
+                        maxEnemies--;
+                    } else if (325 < ran && ran < 920) {
+                        level[i][j] = 0;
+                    } else if (compassPosition <= i && ran >= 920 && ran < 940 && canCompass) {
+                        level[i][j] = 8;						
+						canCompass = false;
+                    } else if (ran >= 940 && ran < 960) {
+                        level[i][j] = 2;
+                    } else if (ran >= 960 && ran < 985) {
+                        level[i][j] = 3;
+                    } else if (ran >= 985 && ran < 990) {
+                        level[i][j] = 5;
+                    } else if (ran >= 991 && ran < 996) {
+						var slfRan = getRandomInt(1, 10);
+                        level[i][j] = slfRan > 7 ? 7 : 0;
+                    } else if (ran >= 996 && ran < 999) {
+                        level[i][j] = 4;						
+                    } else if (ran === 999) {
+						var slfRan = getRandomInt(1, 10);
+                        level[i][j] = slfRan > 6 ? 6 : 0;
+					} else if (ran === 1000) {
+						var checkArtifactChance = getRandomInt(0, 100);
+						level[i][j] = checkArtifactChance > getArtifactAppearancePercent() ? 10 : 0;
+					}
+                }
+            }
+        }
+		
+		function getArtifactAppearancePercent() {
+			var foundCnt = 0;
+			Object.keys(FOUND_ARTIFACTS).forEach(function(key) {
+				if (FOUND_ARTIFACTS[key]) {
+					foundCnt++;
+				};
+			});
+			if (foundCnt < 3) {
+				return 25
+			};
+			
+			if (foundCnt < 6) {
+				return 45
+			};
+			
+			if (foundCnt < 9) {
+				return 65
+			};
+			
+			return 80;
+			
+		}
+        
+        function generatePlayerStart(level) {
+            var playerStartX = Math.round(Math.random()*(gameDimention-1))
+            var playerStartY = Math.round(Math.random()*(gameDimention-1))
+            level[playerStartY][playerStartX] = 99;
+			return {
+				x: playerStartY,
+				y: playerStartX
+			}
+        }
+
+        function tryToGenerateExit(level) {
+            var exitX = Math.round(Math.random()*(gameDimention-1))
+            var exitY = Math.round(Math.random()*(gameDimention-1))
+			return {
+				x: exitY,
+				y: exitX
+			}			
+        }
+
+		function tryToGenerateKey(level) {
+            var keyX = Math.round(Math.random()*(gameDimention-1))
+            var keyY = Math.round(Math.random()*(gameDimention-1))
+			return {
+				x: keyY,
+				y: keyX
+			}			
+        }
+		
+        function generateExit(level) {
+            var tryExit = tryToGenerateExit(level);
+            while(level[tryExit.y][tryExit.x] == 99) {
+            	tryExit = tryToGenerateExit(level);
+            }
+            
+            level[tryExit.y][tryExit.x] = 100;
+			return {
+				x: tryExit.y,
+				y: tryExit.x
+			}			
+        }
+		
+		function generateKeys(level, maxKeys) {
+			
+			levelKeysList = [];
+			
+			for (var i=0; i < maxKeys; i++) {
+				var tryKey = tryToGenerateKey(level);
+				while(level[tryKey.y][tryKey.x] == 99 || level[tryKey.y][tryKey.x] == 100 || level[tryKey.y][tryKey.x] == 101) {
+					tryKey = tryToGenerateKey(level);
+				}
+				
+				level[tryKey.y][tryKey.x] = 101;
+				levelKeysList.push({
+					x: tryKey.y,
+					y: tryKey.x
+				});
+				
+			}
+			
+			return levelKeysList;			
+		}
+		
+		function buildYellowBrickRoad(level, startPoint, endPoint) {
+        	var dimension = level.length;
+            var road = [];
+            var nextX = startPoint.x;
+            var nextY = startPoint.y;
+            
+            var corrX = null;
+            var corrY = null;
+            
+            var ready = false;
+            var fail = 0;
+			
+			function processNextY(nextY, endY) {
+				if (nextY < endY) {
+					nextY = nextY+1;
+				} else if (nextY > endY) {
+					nextY = nextY-1;
+				} else {
+					nextY = nextY;
+				}
+				return nextY;
+			}
+            
+            while(!ready) {
+            	var oldX = nextX;
+                var oldY = nextY;
+				
+            	if (nextX < endPoint.x) {
+                	nextX = nextX+1;
+					nextY = processNextY(nextY, endPoint.y);
+                } else if (nextX > endPoint.x) {
+                	nextX = nextX-1;
+					nextY = processNextY(nextY, endPoint.y);
+                } else {
+                	nextX = nextX;
+					nextY = processNextY(nextY, endPoint.y);
+                }
+                
+                fail++;                       
+                
+                if (oldX != nextX) {
+                	corrX = nextX;
+                	corrY = oldY;
+                } else {
+					corrX = null;
+					corrY = null;
+                }
+                
+                if (nextX === endPoint.x && nextY === endPoint.y) {
+                	ready = true;
+                } else {
+                	road.push({
+                    	x: nextX,
+                        y: nextY
+                    })
+                }
+                
+				if (corrX != null && corrY != null) {
+					road.push({
+						x: corrX,
+						y: corrY
+					})
+				}                
+                
+                if (fail === 10000) {
+                	ready = true;
+					console.error("Failed to build Yellow Brick Road.");
+                }                
+            }
+            
+            return road;
+		}
+        
+        function destroyLevel() {
+            enemies.forEach((en)=>{
+                en.kill();
+            });
+            enemies = [];
+			
+            items.forEach((it)=>{
+                it.kill();
+            });
+            items = [];			
+			
+            platforms.removeAll();			
+			floors.removeAll();
+			transistors.removeAll();
+			micros.removeAll();
+			cpus.removeAll();
+			lifes.removeAll();
+			keys.removeAll();
+			files.removeAll();
+			mainFiles.removeAll();
+			
+			hasCompass = false;
+			
+			clearInterval(paintMainFileInterval);
+			
+			currentLevelFlags = {};
+            
+        }
+		
+		function getRandomInt (min, max) {
+		  return Math.floor(Math.random() * (max - min + 1)) + min;
+		};
+		
+    };
+
+    </script>
+
+    </body>
+</html>
